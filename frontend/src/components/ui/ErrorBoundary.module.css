@@ -1,0 +1,37 @@
+.wrap {
+  max-width: 480px;
+  margin: 15vh auto 0;
+  padding: var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.wrap h1 {
+  font-size: 18px;
+  margin-bottom: var(--s2);
+}
+
+.wrap p {
+  color: var(--text-muted-aa);
+  margin: 0 0 var(--s4);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s2);
+}
+
+.actions button {
+  min-height: var(--control-h);
+  padding: 0 var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.actions .primary {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--on-primary);
+}

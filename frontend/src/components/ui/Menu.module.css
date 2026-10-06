@@ -1,0 +1,27 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  text-align: left;
+  min-height: var(--control-h);
+  padding: 0 var(--s3);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--surface-alt);
+}
+
+.danger {
+  color: var(--danger);
+}

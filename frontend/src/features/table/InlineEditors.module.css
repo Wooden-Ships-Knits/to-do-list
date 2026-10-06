@@ -1,0 +1,73 @@
+.trigger {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  padding: 2px var(--s1);
+  margin: 0 calc(-1 * var(--s1));
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+
+.trigger:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.empty {
+  color: var(--text-muted-aa);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s1);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.fieldLabel {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.hint {
+  color: var(--text-muted-aa);
+  font-size: 12px;
+}
+
+.select {
+  min-height: var(--control-h);
+  padding: 0 var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+@media (pointer: coarse) {
+  .trigger {
+    min-height: var(--control-h);
+    display: flex;
+    align-items: center;
+  }
+}
+
+.emptyMark {
+  display: block;
+  min-height: 20px;
+}

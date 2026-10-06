@@ -1,0 +1,99 @@
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4);
+  padding-left: max(var(--s4), var(--safe-left));
+  padding-right: max(var(--s4), var(--safe-right));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.header h1 {
+  font-size: 20px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.card {
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+}
+
+.card h2 {
+  font-size: 15px;
+  margin-bottom: var(--s2);
+}
+
+.muted {
+  color: var(--text-muted-aa);
+  overflow-wrap: anywhere;
+}
+
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  font-weight: 600;
+}
+
+.file input {
+  max-width: 100%;
+  min-height: var(--control-h);
+}
+
+.error {
+  color: var(--danger);
+  margin: var(--s2) 0 0;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: var(--surface-alt);
+}
+
+.bad td {
+  background: var(--overdue-tint);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s3);
+}

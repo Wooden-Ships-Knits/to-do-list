@@ -1,0 +1,15 @@
+.trigger {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.trigger:hover {
+  background: var(--surface-alt);
+}

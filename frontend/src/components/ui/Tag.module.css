@@ -1,0 +1,44 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--s2);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.current {
+  background: var(--tag-current-bg);
+  color: var(--tag-current-fg);
+}
+.pending {
+  background: var(--tag-pending-bg);
+  color: var(--tag-pending-fg);
+}
+.maintenance {
+  background: var(--tag-maintenance-bg);
+  color: var(--tag-maintenance-fg);
+}
+.st_overdue {
+  background: var(--st-overdue-bg);
+  color: var(--st-overdue-fg);
+}
+.st_due_soon {
+  background: var(--st-due-soon-bg);
+  color: var(--st-due-soon-fg);
+}
+.st_on_track {
+  background: var(--st-on-track-bg);
+  color: var(--st-on-track-fg);
+}
+.st_done {
+  background: var(--st-done-bg);
+  color: var(--st-done-fg);
+}
+.st_no_deadline {
+  background: var(--st-no-deadline-bg);
+  color: var(--st-no-deadline-fg);
+}

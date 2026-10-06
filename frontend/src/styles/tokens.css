@@ -1,0 +1,226 @@
+/* Design tokens. Every colour in the app comes from here; components never hard-code colours.
+   Dark is the default theme, light is an option (set with data-theme on <html>, see theme.ts). */
+
+:root {
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  --row-h: 36px;
+  --control-h: 32px;
+  --sidebar-w: 240px;
+  --sidebar-w-rail: 56px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --vvh: 100dvh; /* visible height; shortened while the on-screen keyboard is open */
+
+  /* Avatar colours: one fixed muted palette (dark initials stay readable in both themes). */
+  --avatar-fg: #1a1b1e;
+  --avatar-1: #9c8bd6;
+  --avatar-2: #6fb5b8;
+  --avatar-3: #d1a06c;
+  --avatar-4: #92b97b;
+  --avatar-5: #cc8aa3;
+  --avatar-6: #84a3d6;
+  --avatar-7: #b8a56e;
+  --avatar-8: #b596c4;
+
+  /* Stage dots (decorative, the stage name is always written next to it) */
+  --dot-default: #9a9ba1;
+  --dot-not-started: #9a9ba1;
+  --dot-investigation: #b596c4;
+  --dot-in-progress: #84a3d6;
+  --dot-in-development: #6fb5b8;
+  --dot-testing: #e2b657;
+  --dot-waiting: #d1a06c;
+  --dot-built: #92b97b;
+  --dot-live: #5fbf8a;
+  --dot-under-maintenance: #6fa8dc;
+  --dot-done: #5fbf8a;
+}
+
+/* ------------------------------------------------------------------ dark (default) */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #1a1b1e;
+  --sidebar: #151619;
+  --surface: #212226;
+  --surface-alt: #26272b;
+  --surface-raised: #2c2d32;
+  --border: #34353a;
+  --border-strong: #44454b;
+  --text: #e6e6e8;
+  --text-muted: #9a9ba1;
+  --accent: #7b68ee; /* focus ring, active tab, drop line, bars. Solid, never a gradient. */
+
+  /* AA companions: #7B68EE is 3.8:1 on --surface (fine for rings and bars, not for text or
+     for a button label), so text and buttons use these tones of the same hue. */
+  --accent-text: #a89cf7;
+  --primary-bg: #6252d4;
+  --primary-bg-hover: #5b4bcb;
+  --on-primary: #ededf0;
+  --focus-ring: #7b68ee;
+  --text-muted-aa: #9a9ba1;
+  --text-label-strong: #c4c5ca;
+
+  --row-hover: #26272b;
+  --overlay: rgba(10, 10, 12, 0.62);
+  --shadow-pop: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-panel: -6px 0 20px rgba(0, 0, 0, 0.3);
+
+  /* Category and status pills. The *-spec tokens hold the exact colours from the design
+     brief; where the brief's text colour is under 4.5:1 on some row state (maintenance on the
+     overdue tint, overdue pill on the overdue row, "no deadline" on hovered rows) the pill uses
+     the slightly lighter AA tone next to it. */
+  --tag-current-fg: #6fcf97;
+  --tag-current-bg: rgba(111, 207, 151, 0.14);
+  --tag-pending-fg: #e2b657;
+  --tag-pending-bg: rgba(226, 182, 87, 0.14);
+  --tag-maintenance-fg-spec: #6fa8dc;
+  --tag-maintenance-fg: #7bafdf;
+  --tag-maintenance-bg: rgba(111, 168, 220, 0.14);
+
+  --st-overdue-fg-spec: #f07a70;
+  --st-overdue-fg: #f28d84;
+  --st-overdue-bg: rgba(240, 122, 112, 0.15);
+  --st-due-soon-fg: #e8a33d;
+  --st-due-soon-bg: rgba(232, 163, 61, 0.15);
+  --st-on-track-fg: #5fbf8a;
+  --st-on-track-bg: rgba(95, 191, 138, 0.14);
+  --st-done-fg: #5fbf8a;
+  --st-done-bg: rgba(95, 191, 138, 0.14);
+  --st-no-deadline-fg-spec: #9a9ba1;
+  --st-no-deadline-fg: #a8a9ae;
+  --st-no-deadline-bg: rgba(154, 155, 161, 0.14);
+
+  --done-text: #9a9ba1;
+  --overdue-border: #f07a70;
+  --overdue-tint: rgba(240, 122, 112, 0.06);
+
+  /* Schedule cells (Plan Date, Adjusted Plan Date, Actual Date, PIC) */
+  --cell-empty: #e8d44d;
+  --cell-empty-hover: #d6c23d;
+  --cell-empty-label: #1a1b1e; /* the only text that ever sits on a yellow cell (card labels) */
+  --cell-filled: #3a3b40;
+  --cell-filled-hover: #34353a;
+  --cell-filled-text: #e6e6e8;
+  --adjusted-date: #8ab4f8;
+  --adjusted-date-on-grey: #8ab4f8;
+
+  --danger: #f07a70;
+  --danger-bg: rgba(240, 122, 112, 0.15);
+  --danger-solid: #b8433a;
+  --danger-solid-hover: #a33a32;
+  --on-danger: #ededf0;
+  --warning-bg: rgba(232, 163, 61, 0.15);
+  --warning-fg: #e8a33d;
+
+  --skeleton-a: #2c2d32;
+  --skeleton-b: #34353a;
+  --toast-bg: #2c2d32;
+  --toast-fg: #e6e6e8;
+  --toast-border: #44454b;
+  --toast-error-bg: #3a2523;
+  --toast-link: #a89cf7;
+}
+
+/* ------------------------------------------------------------------ light */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f7f5f1;
+  --sidebar: #efece5;
+  --surface: #ffffff;
+  --surface-alt: #fbfaf7;
+  --surface-raised: #ffffff;
+  --border: #e6e1d8;
+  --border-strong: #d6d0c4;
+  --text: #2c2b28;
+  --text-muted: #78736a;
+  --accent: #5b7a6a;
+
+  --accent-text: #4b6858;
+  --primary-bg: #4b6858;
+  --primary-bg-hover: #3f5a4b;
+  --on-primary: #ffffff;
+  --focus-ring: #4b6858;
+  --text-muted-aa: #6b665d;
+  --text-label-strong: #55524b;
+
+  --row-hover: #f3f1eb;
+  --overlay: rgba(44, 43, 40, 0.38);
+  --shadow-pop: 0 4px 14px rgba(44, 43, 40, 0.1), 0 1px 3px rgba(44, 43, 40, 0.06);
+  --shadow-panel: -6px 0 20px rgba(44, 43, 40, 0.08);
+
+  --tag-current-bg: #e3ece5;
+  --tag-current-fg: #3f6650;
+  --tag-pending-bg: #f2e8d5;
+  --tag-pending-fg: #7d6029;
+  --tag-maintenance-bg: #e1e7ee;
+  --tag-maintenance-fg-spec: #46607a;
+  --tag-maintenance-fg: #46607a;
+
+  --st-overdue-bg: #f5e3e0;
+  --st-overdue-fg-spec: #9a3f35;
+  --st-overdue-fg: #9a3f35;
+  --st-due-soon-bg: #f7ead9;
+  --st-due-soon-fg: #8c5a24;
+  --st-on-track-bg: #e8eee9;
+  --st-on-track-fg: #4e6b58;
+  --st-done-bg: #e3ece5;
+  --st-done-fg: #3f6650;
+  --st-no-deadline-bg: #eeece8;
+  --st-no-deadline-fg-spec: #78736a;
+  --st-no-deadline-fg: #6b665d;
+
+  --done-text: #6b665d;
+  --overdue-border: #c9867c;
+  --overdue-tint: #fcf5f3;
+
+  --cell-empty: #fff176;
+  --cell-empty-hover: #ffe94a;
+  --cell-empty-label: #55524b;
+  --cell-filled: #e4e4e4;
+  --cell-filled-hover: #d6d6d6;
+  --cell-filled-text: #2c2b28;
+  /* #4A6A96 on the grey cell is only 4.35:1; this tone of the same blue passes AA (5.35:1). */
+  --adjusted-date: #4a6a96;
+  --adjusted-date-on-grey: #3d5c88;
+
+  --danger: #9a3f35;
+  --danger-bg: #f5e3e0;
+  --danger-solid: #9a3f35;
+  --danger-solid-hover: #823329;
+  --on-danger: #ffffff;
+  --warning-bg: #f7ead9;
+  --warning-fg: #8c5a24;
+
+  --skeleton-a: #ece8e0;
+  --skeleton-b: #f3f0ea;
+  --toast-bg: #2c2b28;
+  --toast-fg: #ffffff;
+  --toast-border: #2c2b28;
+  --toast-error-bg: #7d2f27;
+  --toast-link: #ffffff;
+}
+
+/* Touch devices: 44x44 targets, dense 36px rows stay on desktop */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+    --row-h: 44px;
+  }
+}

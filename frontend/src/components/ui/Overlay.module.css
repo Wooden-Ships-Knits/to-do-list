@@ -1,0 +1,180 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.root_panel {
+  z-index: 40;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  pointer-events: auto;
+  animation: fade 0.15s ease-out;
+}
+
+.surface {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-pop);
+  pointer-events: auto;
+  outline: none;
+  overscroll-behavior: contain;
+}
+
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  border-bottom: 1px solid var(--border);
+}
+
+.titleWrap {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.title {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  color: var(--text-muted-aa);
+  font-size: 13px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: var(--s4);
+}
+
+.footer {
+  flex: none;
+  display: flex;
+  gap: var(--s2);
+  justify-content: flex-end;
+  padding: var(--s3) var(--s4);
+  padding-bottom: calc(var(--s3) + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* centred dialog */
+.dialog {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 2 * var(--s4));
+  max-width: 460px;
+  max-height: calc(var(--vvh) - 2 * var(--s4));
+  border-radius: var(--radius-lg);
+}
+
+/* bottom sheet (mobile filters) */
+.bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(var(--vvh) * 0.92);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  animation: slide-up 0.2s ease-out;
+}
+
+/* full-screen detail sheet (mobile) */
+.full {
+  inset: 0;
+  height: var(--vvh);
+  border-radius: 0;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  box-shadow: none;
+  animation: slide-up 0.2s ease-out;
+}
+
+/* tablet drawer: 80% width overlay */
+.drawer {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 80%;
+  max-width: 720px;
+  max-height: var(--vvh);
+  padding-right: var(--safe-right);
+  animation: slide-left 0.2s ease-out;
+}
+
+/* navigation drawer from the left (mobile menu, tablet sidebar) */
+.left {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(86vw, 300px);
+  max-height: var(--vvh);
+  padding-left: var(--safe-left);
+  background: var(--sidebar);
+  animation: slide-right 0.2s ease-out;
+}
+
+.left .body {
+  padding: 0;
+}
+
+/* desktop side panel: sits next to the table, no backdrop */
+.panel {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  box-shadow: var(--shadow-panel);
+  border-left: 1px solid var(--border);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-right {
+  from {
+    transform: translateX(-32px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-left {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+
+.dialog {
+  animation: fade 0.12s ease-out;
+}

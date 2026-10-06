@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#1A1B1E" />
+    <script>
+      // Set the theme before anything renders, so there is no flash of the wrong theme.
+      (function () {
+        var root = document.documentElement;
+        try {
+          var mode = localStorage.getItem('todo.theme');
+          if (mode !== 'light' && mode !== 'system') mode = 'dark';
+          var light =
+            mode === 'light' ||
+            (mode === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
+          root.dataset.theme = light ? 'light' : 'dark';
+          root.dataset.themeMode = mode;
+        } catch (e) {
+          root.dataset.theme = 'dark';
+          root.dataset.themeMode = 'dark';
+        }
+      })();
+    </script>
+    <meta name="description" content="Project to-do dashboard" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Projects</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

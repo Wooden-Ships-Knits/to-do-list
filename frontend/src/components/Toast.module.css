@@ -1,0 +1,68 @@
+.region {
+  position: fixed;
+  z-index: 100;
+  left: var(--s4);
+  right: var(--s4);
+  bottom: calc(var(--s4) + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  max-width: min(520px, 100%);
+  padding: var(--s2) var(--s3);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  border: 1px solid var(--toast-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+}
+
+.error {
+  background: var(--toast-error-bg);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.action {
+  background: none;
+  border: 0;
+  color: var(--toast-link);
+  font-weight: 600;
+  text-decoration: underline;
+  padding: var(--s1) var(--s2);
+  min-height: var(--control-h);
+}
+
+.close {
+  background: none;
+  border: 0;
+  color: var(--toast-fg);
+  min-width: var(--control-h);
+  min-height: var(--control-h);
+  display: grid;
+  place-items: center;
+}
+
+.toast :focus-visible {
+  outline-color: var(--toast-fg);
+}
+
+@media (min-width: 1024px) {
+  .region {
+    left: auto;
+    right: var(--s5);
+    align-items: flex-end;
+  }
+}

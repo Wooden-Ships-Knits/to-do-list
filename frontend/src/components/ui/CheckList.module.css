@@ -1,0 +1,45 @@
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--s1);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--control-h);
+  padding: 0 var(--s2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--surface-alt);
+}
+
+.option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+.option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

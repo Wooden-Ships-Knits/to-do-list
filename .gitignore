@@ -1,0 +1,17 @@
+.env
+node_modules/
+dist/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+frontend/test-results/
+frontend/playwright-report/
+test-results/
+*.pyc
+backend/junit.xml
+projects-*.csv
+projects-*.xlsx
+.DS_Store

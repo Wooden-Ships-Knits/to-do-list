@@ -1,0 +1,501 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* Horizontal scroll lives here, never on the page. */
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overscroll-behavior: contain;
+  --group-h: 28px;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 4px var(--s3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+/* ---- header: two rows, "Schedule" sits above Plan / Adjusted / Actual / PIC ---- */
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: var(--row-h);
+  background: var(--surface-alt);
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: var(--s2);
+}
+
+.table thead .groupHead {
+  height: var(--group-h);
+  padding: 0 var(--s2);
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted-aa);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.table thead .subHead {
+  top: var(--group-h);
+  border-left: 1px solid var(--border);
+}
+
+.handleHead,
+.numberHead {
+  padding: 0 !important;
+}
+
+.numberHead {
+  text-align: right !important;
+  padding-right: var(--s3) !important;
+}
+
+.abbr {
+  text-decoration: none;
+  cursor: help;
+}
+
+/* ---- body ---- */
+.table tbody td {
+  height: var(--row-h);
+  background: var(--surface);
+}
+
+.row:nth-child(even) td {
+  background: var(--surface-alt);
+}
+
+.row:hover td {
+  background: var(--row-hover);
+}
+
+.overdue td {
+  background: var(--overdue-tint) !important;
+}
+
+.overdue td:first-child {
+  box-shadow: inset 3px 0 0 var(--overdue-border);
+}
+
+.done td {
+  color: var(--done-text);
+}
+
+.handleCell {
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+.numberCell {
+  text-align: right !important;
+  padding-right: var(--s3) !important;
+  color: var(--text-muted-aa);
+  font-weight: 500;
+}
+
+/* ---- schedule cells: empty = yellow, filled = grey. Row tints and zebra never override them. ---- */
+.table td.sched {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.table td.sched.empty {
+  background: var(--cell-empty) !important;
+}
+
+.table td.sched.filled {
+  background: var(--cell-filled) !important;
+  color: var(--cell-filled-text) !important;
+}
+
+.table td.sched.empty:hover,
+.table td.sched.empty:focus-within {
+  background: var(--cell-empty-hover) !important;
+}
+
+.table td.sched.filled:hover,
+.table td.sched.filled:focus-within {
+  background: var(--cell-filled-hover) !important;
+}
+
+.table td.sched button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.table td.sched button:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.adjusted {
+  font-style: italic;
+  color: var(--adjusted-date-on-grey);
+}
+
+.muted {
+  color: var(--text-muted-aa);
+}
+
+.marker {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--adjusted-date);
+}
+
+.nameButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.nameButton:hover {
+  text-decoration-color: currentColor;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.issue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+
+.issueLabel {
+  font-weight: 600;
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sortButton span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sortMark {
+  font-size: 9px;
+  color: var(--accent-text);
+}
+
+.filterButton {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted-aa);
+}
+
+.filterButton:hover {
+  background: var(--border);
+}
+
+.filterActive {
+  color: var(--accent-text);
+  background: var(--tag-current-bg);
+}
+
+.filterBody {
+  min-width: 220px;
+  padding: var(--s1);
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+button.resizer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.resizer::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 3px;
+  width: 1px;
+  background: var(--border);
+}
+
+.resizer:hover::after,
+.resizing::after {
+  width: 2px;
+  background: var(--accent);
+}
+
+.actionsHead,
+.actionsCell {
+  width: 48px;
+  padding: 0 var(--s1) !important;
+  text-align: center !important;
+}
+
+/* ---- groups ---- */
+/* Sticky under the column header while its group scrolls */
+.groupRow td {
+  position: sticky;
+  top: calc(var(--group-h) + var(--row-h));
+  z-index: 2;
+  height: var(--row-h);
+  padding: 0 var(--s2);
+  background: var(--bg) !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.groupOver td {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.groupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--control-h);
+  padding: 0 var(--s1);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.groupCount {
+  color: var(--text-muted-aa);
+  font-weight: 400;
+}
+
+/* ---- drag and drop: the row being dragged leaves a 2px accent line where it will land ---- */
+.dragging td {
+  opacity: 0.55;
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.orderNote {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted-aa);
+}
+
+/* ---- tablet: grip, number and Project stay put while the rest scrolls inside the container ---- */
+.sticky th[data-fixed],
+.sticky td[data-fixed],
+.sticky th[data-col='name'],
+.sticky td[data-col='name'] {
+  position: sticky;
+  z-index: 2;
+}
+
+.sticky [data-fixed='handle'] {
+  left: 0;
+}
+
+.sticky [data-fixed='number'] {
+  left: 40px;
+}
+
+.sticky [data-col='name'] {
+  left: 96px;
+  border-right: 1px solid var(--border);
+}
+
+.sticky thead th[data-fixed],
+.sticky thead th[data-col='name'] {
+  z-index: 4;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  padding: var(--s3) 0 0;
+}
+
+.range {
+  color: var(--text-muted-aa);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  flex-wrap: wrap;
+}
+
+td[data-col*='date'] .num,
+td[data-col*='deadline'] .num {
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .filterButton,
+  .sortButton,
+  .nameButton,
+  .groupToggle {
+    min-width: var(--control-h);
+    min-height: var(--control-h);
+  }
+
+  .nameButton {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Dragging a 8px handle is not a touch interaction; widths are a desktop setting. */
+  button.resizer {
+    display: none;
+  }
+
+  .scroll {
+    --group-h: 32px;
+  }
+}
+
+/* scrollIntoView keeps a row clear of the sticky two-row header */
+.row {
+  scroll-margin-top: 84px;
+}
+
+/* ---- quick add at the bottom of each group ---- */
+.addRow td {
+  height: var(--row-h);
+  padding: 0 var(--s3);
+  background: var(--surface);
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--control-h);
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted-aa);
+}
+
+.addButton:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.addForm {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s1) 0;
+}
+
+.addInput {
+  width: min(420px, 100%);
+  min-height: var(--control-h);
+  padding: 0 var(--s2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.addError {
+  color: var(--danger);
+}
+
+/* ---- the grip and the row menu appear on hover, but are always there on touch devices and
+   for keyboard focus ---- */
+.handleCell button,
+.actionsCell button {
+  opacity: 0;
+}
+
+.row:hover .handleCell button,
+.row:hover .actionsCell button,
+.row:focus-within .handleCell button,
+.row:focus-within .actionsCell button,
+.handleCell button:focus-visible,
+.actionsCell button:focus-visible,
+.dragging .handleCell button {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .handleCell button,
+  .actionsCell button {
+    opacity: 1;
+  }
+}

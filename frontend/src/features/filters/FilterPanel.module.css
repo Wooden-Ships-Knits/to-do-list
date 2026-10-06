@@ -1,0 +1,33 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.section:first-child {
+  padding-top: 0;
+}
+
+.section:last-child {
+  border-bottom: 0;
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--s1);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.select {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}

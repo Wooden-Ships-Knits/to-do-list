@@ -1,0 +1,39 @@
+.wrap {
+  min-width: 0;
+}
+
+.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.full {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: underline;
+  min-height: 20px;
+}
+
+.empty {
+  color: var(--text-muted-aa);
+}
+
+@media (pointer: coarse) {
+  .toggle {
+    min-height: var(--control-h);
+    min-width: var(--control-h);
+    padding: 0 var(--s2) 0 0;
+  }
+}

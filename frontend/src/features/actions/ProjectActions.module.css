@@ -1,0 +1,59 @@
+.text {
+  margin: 0 0 var(--s3);
+  overflow-wrap: anywhere;
+}
+
+.text p {
+  margin: 0 0 var(--s2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  font-weight: 500;
+}
+
+.error {
+  margin: var(--s2) 0 0;
+  color: var(--danger);
+}
+
+.list {
+  margin: 0 0 var(--s2);
+  padding-left: var(--s4);
+}
+
+.muted {
+  color: var(--text-muted-aa);
+}
+
+.choices {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--s1);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--control-h);
+  cursor: pointer;
+}
+
+.choice input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}

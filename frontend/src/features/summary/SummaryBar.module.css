@@ -1,0 +1,84 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 2px 0;
+}
+
+.group {
+  display: flex;
+  gap: var(--s2);
+  flex: none;
+}
+
+.divider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: none;
+  min-height: var(--control-h);
+  padding: 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.item:hover {
+  background: var(--surface-alt);
+}
+
+.item[aria-pressed='true'] {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--on-primary);
+}
+
+.label {
+  color: inherit;
+}
+
+.count {
+  font-weight: 500;
+}
+
+/* Colour is only a hint: every item also carries its text label. */
+.tone_overdue .count {
+  color: var(--st-overdue-fg);
+}
+.tone_due_soon .count {
+  color: var(--st-due-soon-fg);
+}
+.item[aria-pressed='true'] .count {
+  color: inherit;
+}
+
+.error {
+  padding: var(--s2) 0;
+  color: var(--text-muted-aa);
+}
+
+.retry {
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  text-decoration: underline;
+  padding: 0;
+}
+
+@media (max-width: 639.98px) {
+  .item {
+    padding: 0 var(--s2);
+    gap: var(--s1);
+  }
+}

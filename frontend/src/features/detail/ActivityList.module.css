@@ -1,0 +1,39 @@
+.section {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+}
+
+.heading {
+  font-size: 14px;
+  margin-bottom: var(--s3);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.what {
+  overflow-wrap: anywhere;
+}
+
+.when {
+  color: var(--text-muted-aa);
+  font-size: 12px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted-aa);
+}
