@@ -13,7 +13,7 @@ from pydantic import (
 
 from app.clock import today
 from app.deadline import DeadlineStatus, deadline_status, effective_deadline
-from app.models import MAX_DATE, MIN_DATE, Category, Project
+from app.models import MAX_DATE, MIN_DATE, ActivityLog, Category, Project, Task
 
 
 def _check_range(value: date | None) -> date | None:
@@ -131,9 +131,22 @@ class ProjectOut(BaseModel):
     deadline_status: DeadlineStatus
     # 1-based position inside the category (manual order); independent of filters.
     number: int | None = None
+    # Non-deleted subtasks at every level, and how many of them are done.
+    subtask_total: int = 0
+    subtask_done: int = 0
+    # Subtasks that matched the search / PIC filter (list responses only), so the
+    # client can expand and highlight them.
+    matching_task_ids: list[uuid.UUID] = Field(default_factory=list)
 
     @classmethod
-    def from_model(cls, p: Project, today_: date, number: int | None = None) -> "ProjectOut":
+    def from_model(
+        cls,
+        p: Project,
+        today_: date,
+        number: int | None = None,
+        counts: tuple[int, int] = (0, 0),
+        matching_task_ids: list[uuid.UUID] | None = None,
+    ) -> "ProjectOut":
         return cls(
             id=p.id,
             name=p.name,
@@ -158,6 +171,9 @@ class ProjectOut(BaseModel):
                 p.actual_date, p.plan_date, p.adjusted_plan_date, today_
             ),
             number=number,
+            subtask_total=counts[0],
+            subtask_done=counts[1],
+            matching_task_ids=matching_task_ids or [],
         )
 
 
@@ -170,14 +186,133 @@ class Page[T](BaseModel):
 
 
 class ActivityOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     project_id: uuid.UUID
+    # Set when the entry is about a subtask; task_name is the subtask's current name.
+    task_id: uuid.UUID | None = None
+    task_name: str | None = None
     field: str
     old_value: str | None
     new_value: str | None
     changed_at: datetime
+
+    @classmethod
+    def from_model(cls, a: ActivityLog) -> "ActivityOut":
+        return cls(
+            id=a.id,
+            project_id=a.project_id,
+            task_id=a.task_id,
+            task_name=a.task.name if a.task is not None else None,
+            field=a.field,
+            old_value=a.old_value,
+            new_value=a.new_value,
+            changed_at=a.changed_at,
+        )
+
+
+class TaskCreate(BaseModel):
+    """parent_id = None puts the subtask directly under the project."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: ProjectName
+    parent_id: uuid.UUID | None = None
+    notes: LongText = ""
+    stage_id: int | None = None  # default: Not Started
+    plan_date: OptDate = None
+    adjusted_plan_date: OptDate = None
+    actual_date: ActualDate = None
+    pic_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+TASK_NON_NULLABLE_PATCH_FIELDS = ("name", "notes", "stage_id", "pic_ids")
+
+
+class TaskPatch(BaseModel):
+    """Fields that are omitted stay unchanged; date fields may be set to null (= TBD)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: int
+    name: ProjectName | None = None
+    notes: LongText | None = None
+    stage_id: int | None = None
+    plan_date: OptDate = None
+    adjusted_plan_date: OptDate = None
+    actual_date: ActualDate = None
+    pic_ids: list[uuid.UUID] | None = None
+
+    @model_validator(mode="after")
+    def _no_null_for_required(self) -> "TaskPatch":
+        for field in TASK_NON_NULLABLE_PATCH_FIELDS:
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
+
+
+class TaskOut(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    parent_id: uuid.UUID | None
+    depth: int
+    name: str
+    notes: str
+    stage_id: int
+    stage: StageOut
+    plan_date: date | None
+    adjusted_plan_date: date | None
+    actual_date: date | None
+    pics: list[PersonRef]
+    version: int
+    deleted_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    effective_deadline: date | None
+    deadline_status: DeadlineStatus
+
+    @classmethod
+    def from_model(cls, t: Task, today_: date) -> "TaskOut":
+        return cls(
+            id=t.id,
+            project_id=t.project_id,
+            parent_id=t.parent_id,
+            depth=t.depth,
+            name=t.name,
+            notes=t.notes,
+            stage_id=t.stage_id,
+            stage=StageOut.model_validate(t.stage),
+            plan_date=t.plan_date,
+            adjusted_plan_date=t.adjusted_plan_date,
+            actual_date=t.actual_date,
+            pics=[PersonRef.model_validate(x) for x in t.pics],
+            version=t.version,
+            deleted_at=t.deleted_at,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+            effective_deadline=effective_deadline(t.plan_date, t.adjusted_plan_date),
+            deadline_status=deadline_status(
+                t.actual_date, t.plan_date, t.adjusted_plan_date, today_
+            ),
+        )
+
+
+class TaskReorderRequest(BaseModel):
+    """Move a subtask (with its children) under parent_id (None = directly under the project),
+    next to a sibling. No anchor = end of that parent's subtasks."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: uuid.UUID
+    parent_id: uuid.UUID | None = None
+    before_id: uuid.UUID | None = None
+    after_id: uuid.UUID | None = None
+    version: int
+
+    @model_validator(mode="after")
+    def _one_anchor(self) -> "TaskReorderRequest":
+        if self.before_id is not None and self.after_id is not None:
+            raise ValueError("send either before_id or after_id, not both")
+        return self
 
 
 class PersonCreate(BaseModel):

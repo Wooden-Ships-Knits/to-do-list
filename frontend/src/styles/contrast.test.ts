@@ -220,6 +220,19 @@ describe.each(THEMES)('%s theme: text contrast is at least WCAG AA (4.5:1)', (_n
     expect(ratio(colour(t, 'toast-link'), colour(t, 'toast-error-bg'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('subtasks: a matching name, the progress badge, Markdown code and selected text', () => {
+    for (const row of ['surface', 'surface-alt']) {
+      expect(ratio(colour(t, 'text'), colour(t, 'match-bg', row))).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(colour(t, 'st-done-fg'), colour(t, row))).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(colour(t, 'text'), colour(t, 'selection-bg', row))).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(ratio(colour(t, 'text'), colour(t, 'surface-raised'))).toBeGreaterThanOrEqual(4.5);
+    // done subtask names are struck through in the muted tone, still readable
+    expect(ratio(colour(t, 'text-muted-aa'), colour(t, 'surface-raised'))).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+
   it.each([1, 2, 3, 4, 5, 6, 7, 8])('avatar initials on avatar colour %i', (n) => {
     expect(ratio(colour(t, 'avatar-fg'), colour(t, `avatar-${n}`))).toBeGreaterThanOrEqual(4.5);
   });

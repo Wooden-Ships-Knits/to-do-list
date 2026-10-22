@@ -32,6 +32,7 @@ export const keys = {
   infinite: (params: QueryParams) => ['projects', 'infinite', params] as const,
   project: (id: string) => ['project', id] as const,
   activity: (id: string) => ['activity', id] as const,
+  tasks: (projectId: string) => ['tasks', projectId] as const,
 };
 
 type ListData = Page<Project>;
@@ -220,7 +221,7 @@ const chains = new Map<string, Promise<unknown>>();
 
 /** Runs patches for the same project one after another, so a fast second edit uses the
  *  version returned by the first instead of conflicting with it. */
-function serialize<T>(id: string, task: () => Promise<T>): Promise<T> {
+export function serialize<T>(id: string, task: () => Promise<T>): Promise<T> {
   const previous = chains.get(id) ?? Promise.resolve();
   const next = previous.then(task, task);
   const cleanup = (): void => {

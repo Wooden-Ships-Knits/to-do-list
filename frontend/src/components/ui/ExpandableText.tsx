@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { MarkdownView } from '../markdown/MarkdownView';
 import styles from './ExpandableText.module.css';
 
-/** Long text is truncated to 2 lines with an explicit expand control. */
-export function ExpandableText({ text }: { text: string }) {
+/** Long text is truncated to 2 lines with an explicit expand control. With `markdown` the
+ * text is rendered as Markdown (lists, bold, links...), clamped to the same 2 lines. */
+export function ExpandableText({ text, markdown = false }: { text: string; markdown?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -22,9 +24,15 @@ export function ExpandableText({ text }: { text: string }) {
   if (!text) return <span className={styles.empty}>-</span>;
   return (
     <div className={styles.wrap}>
-      <div ref={ref} className={expanded ? styles.full : styles.clamped}>
-        {text}
-      </div>
+      {markdown ? (
+        <div ref={ref} className={expanded ? styles.fullBlock : styles.clampedBlock}>
+          <MarkdownView text={text} compact />
+        </div>
+      ) : (
+        <div ref={ref} className={expanded ? styles.full : styles.clamped}>
+          {text}
+        </div>
+      )}
       {(overflowing || expanded) && (
         <button
           type="button"

@@ -3,8 +3,11 @@ import { formatDateTime } from '../../lib/dates';
 import { describeActivity } from '../../lib/describe';
 import styles from './ActivityList.module.css';
 
-export function ActivityList({ projectId }: { projectId: string }) {
-  const { data, isPending, isError } = useActivity(projectId);
+/** History of a project (including its subtasks), or of one subtask when `taskId` is set. */
+export function ActivityList({ projectId, taskId }: { projectId: string; taskId?: string }) {
+  const query = useActivity(projectId);
+  const { isPending, isError } = query;
+  const data = taskId ? query.data?.filter((e) => e.task_id === taskId) : query.data;
   const { data: meta } = useMeta();
   const timeZone = meta?.timezone ?? 'UTC';
   return (

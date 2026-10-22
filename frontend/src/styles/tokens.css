@@ -16,6 +16,7 @@
 
   --row-h: 36px;
   --control-h: 32px;
+  --task-indent: 20px; /* one subtask level */
   --sidebar-w: 240px;
   --sidebar-w-rail: 56px;
 
@@ -77,6 +78,8 @@
   --text-label-strong: #c4c5ca;
 
   --row-hover: #26272b;
+  --selection-bg: rgba(123, 104, 238, 0.35);
+  --match-bg: rgba(123, 104, 238, 0.22);
   --overlay: rgba(10, 10, 12, 0.62);
   --shadow-pop: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-panel: -6px 0 20px rgba(0, 0, 0, 0.3);
@@ -161,6 +164,8 @@
   --text-label-strong: #55524b;
 
   --row-hover: #f3f1eb;
+  --selection-bg: rgba(91, 122, 106, 0.25);
+  --match-bg: #e6eee9;
   --overlay: rgba(44, 43, 40, 0.38);
   --shadow-pop: 0 4px 14px rgba(44, 43, 40, 0.1), 0 1px 3px rgba(44, 43, 40, 0.06);
   --shadow-panel: -6px 0 20px rgba(44, 43, 40, 0.08);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Project, ProjectCreateBody, ProjectPatch } from '../api/types';
+import type { Project, ProjectCreateBody, ProjectPatch, Task, TaskPatch } from '../api/types';
 import { CATEGORIES } from '../api/types';
 import { MAX_DATE, MIN_DATE, isValidIsoDate } from './dates';
 
@@ -130,4 +130,54 @@ export function adjustedBeforePlanWarning(plan: string, adjusted: string): strin
     return 'Adjusted plan date is earlier than the original plan date.';
   }
   return null;
+}
+
+/** Subtask form: same rules as the backend TaskPatch. */
+export function makeTaskSchema(today: string) {
+  return z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Name is required')
+      .max(200, 'Name must be 200 characters or fewer'),
+    stage_id: z
+      .number({ invalid_type_error: 'Choose a stage', required_error: 'Choose a stage' })
+      .int()
+      .positive('Choose a stage'),
+    notes: z.string().max(20000, 'Notes are too long'),
+    plan_date: optionalDate,
+    adjusted_plan_date: optionalDate,
+    actual_date: optionalDate.refine(
+      (v) => v === '' || v <= today,
+      'Actual date cannot be in the future',
+    ),
+    pic_ids: z.array(z.string()),
+  });
+}
+
+export type TaskFormValues = z.infer<ReturnType<typeof makeTaskSchema>>;
+
+export function toTaskFormValues(t: Task): TaskFormValues {
+  return {
+    name: t.name,
+    stage_id: t.stage_id,
+    notes: t.notes,
+    plan_date: t.plan_date ?? '',
+    adjusted_plan_date: t.adjusted_plan_date ?? '',
+    actual_date: t.actual_date ?? '',
+    pic_ids: t.pics.map((x) => x.id),
+  };
+}
+
+/** Only the fields the user changed. */
+export function diffTaskPatch(original: TaskFormValues, next: TaskFormValues): TaskPatch {
+  const patch: TaskPatch = {};
+  if (next.name.trim() !== original.name.trim()) patch.name = next.name.trim();
+  if (next.stage_id !== original.stage_id) patch.stage_id = next.stage_id;
+  if (next.notes !== original.notes) patch.notes = next.notes;
+  for (const key of ['plan_date', 'adjusted_plan_date', 'actual_date'] as const) {
+    if (next[key] !== original[key]) patch[key] = nullable(next[key]);
+  }
+  if (!sameSet(next.pic_ids, original.pic_ids)) patch.pic_ids = next.pic_ids;
+  return patch;
 }

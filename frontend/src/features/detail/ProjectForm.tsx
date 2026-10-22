@@ -15,6 +15,7 @@ import { CATEGORIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
+import { MarkdownEditor } from '../../components/markdown/MarkdownEditor';
 import { CATEGORY_LABELS, DONE_STAGE } from '../../lib/status';
 import {
   adjustedBeforePlanWarning,
@@ -266,36 +267,37 @@ export function ProjectForm({
         )}
       />
 
-      <div className={styles.field}>
-        <label htmlFor="pf-description">Description</label>
-        <textarea
-          id="pf-description"
-          rows={3}
-          aria-invalid={invalid('description')}
-          {...register('description')}
+      {(
+        [
+          ['description', 'pf-description', 'Description', 3],
+          ['status_notes', 'pf-notes', 'Status notes', 4],
+          ['ongoing_issue', 'pf-issue', 'Ongoing issue', 3],
+        ] as const
+      ).map(([name, id, label, rows]) => (
+        <Controller
+          key={name}
+          control={control}
+          name={name}
+          render={({ field }) => (
+            <div className={styles.field}>
+              <span id={`${id}-label`} className={styles.label}>
+                {label}
+              </span>
+              <MarkdownEditor
+                id={id}
+                labelId={`${id}-label`}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                minRows={rows}
+                invalid={!!errors[name]}
+                describedBy={errors[name] ? errorId(name) : undefined}
+              />
+              <FieldError id={errorId(name)} message={errors[name]?.message} />
+            </div>
+          )}
         />
-        <FieldError id={errorId('description')} message={errors.description?.message} />
-      </div>
-      <div className={styles.field}>
-        <label htmlFor="pf-notes">Status notes</label>
-        <textarea
-          id="pf-notes"
-          rows={4}
-          aria-invalid={invalid('status_notes')}
-          {...register('status_notes')}
-        />
-        <FieldError id={errorId('status_notes')} message={errors.status_notes?.message} />
-      </div>
-      <div className={styles.field}>
-        <label htmlFor="pf-issue">Ongoing issue</label>
-        <textarea
-          id="pf-issue"
-          rows={3}
-          aria-invalid={invalid('ongoing_issue')}
-          {...register('ongoing_issue')}
-        />
-        <FieldError id={errorId('ongoing_issue')} message={errors.ongoing_issue?.message} />
-      </div>
+      ))}
 
       <div className={styles.row}>
         <Controller

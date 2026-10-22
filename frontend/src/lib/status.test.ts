@@ -40,6 +40,9 @@ const base: Project = {
   effective_deadline: '2026-10-01',
   deadline_status: 'overdue',
   number: 1,
+  subtask_total: 0,
+  subtask_done: 0,
+  matching_task_ids: [],
 };
 const stages = [
   base.stage,

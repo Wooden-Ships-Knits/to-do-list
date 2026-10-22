@@ -1,0 +1,33 @@
+.row td {
+  height: 32px;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.taskName {
+  min-width: 0;
+  font-weight: 400;
+}
+
+.addRow td,
+.info td {
+  height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: var(--surface);
+}
+
+.loading {
+  color: var(--text-muted-aa);
+}
+
+@media (pointer: coarse) {
+  .row td {
+    height: var(--row-h);
+  }
+}

@@ -1,8 +1,10 @@
 import {
   adjustedBeforePlanWarning,
+  diffTaskPatch,
   diffToPatch,
   emptyFormValues,
   makeProjectSchema,
+  makeTaskSchema,
   toCreateBody,
 } from './schema';
 
@@ -75,5 +77,34 @@ describe('payload helpers', () => {
   it('pic order does not matter', () => {
     const before = { ...valid, pic_ids: ['a', 'b'] };
     expect(diffToPatch(before, { ...before, pic_ids: ['b', 'a'] })).toEqual({});
+  });
+});
+
+describe('subtask form', () => {
+  const schema = makeTaskSchema('2026-10-06');
+  const valid = {
+    name: ' Check totals ',
+    stage_id: 1,
+    notes: '- [ ] a',
+    plan_date: '2026-10-10',
+    adjusted_plan_date: '',
+    actual_date: '',
+    pic_ids: [],
+  };
+
+  it('uses the same rules as the backend', () => {
+    expect(schema.safeParse(valid).success).toBe(true);
+    expect(schema.safeParse({ ...valid, name: '   ' }).success).toBe(false);
+    expect(schema.safeParse({ ...valid, name: 'x'.repeat(201) }).success).toBe(false);
+    expect(schema.safeParse({ ...valid, actual_date: '2026-10-07' }).success).toBe(false);
+    expect(schema.safeParse({ ...valid, actual_date: '2026-10-06' }).success).toBe(true);
+    expect(schema.safeParse({ ...valid, plan_date: '2026-13-01' }).success).toBe(false);
+  });
+
+  it('only sends what changed (blank date = TBD)', () => {
+    expect(diffTaskPatch(valid, { ...valid, name: 'Check totals' })).toEqual({});
+    expect(
+      diffTaskPatch(valid, { ...valid, plan_date: '', notes: '**x**', pic_ids: ['u'] }),
+    ).toEqual({ plan_date: null, notes: '**x**', pic_ids: ['u'] });
   });
 });

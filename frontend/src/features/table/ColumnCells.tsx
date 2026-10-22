@@ -6,6 +6,7 @@ import { COLUMN_LABELS, DEFAULT_WIDTHS, DESKTOP_ORDER } from '../../lib/columnSe
 import type { ColumnId } from '../../lib/columnSettings';
 import { formatDate } from '../../lib/dates';
 import type { Actions } from '../actions/ProjectActions';
+import { FoldToggle, ProgressBadge } from '../subtasks/parts';
 import { DateCell, PicCell, StageCell } from './InlineEditors';
 import styles from './ProjectTable.module.css';
 
@@ -13,33 +14,48 @@ export interface TableMeta {
   actions: Actions;
   stages: Stage[];
   persons: Person[];
+  subtasks: {
+    isOpen: (project: Project) => boolean;
+    toggle: (project: Project) => void;
+  };
 }
 
 function Cell({ id, ctx }: { id: ColumnId; ctx: CellContext<Project, unknown> }) {
   const project = ctx.row.original;
-  const { actions, stages, persons } = ctx.table.options.meta as TableMeta;
+  const { actions, stages, persons, subtasks } = ctx.table.options.meta as TableMeta;
   const label = COLUMN_LABELS[id];
   switch (id) {
     case 'category':
       return <CategoryTag category={project.category} />;
-    case 'name':
+    case 'name': {
+      const open = subtasks.isOpen(project);
       return (
-        <button
-          type="button"
-          className={styles.nameButton}
-          onClick={() => actions.open(project.id)}
-        >
-          {project.name}
-        </button>
+        <div className={styles.nameWrap}>
+          <FoldToggle
+            hidden={project.subtask_total === 0 && !open}
+            open={open}
+            label={`${open ? 'Hide' : 'Show'} subtasks of ${project.name}`}
+            onToggle={() => subtasks.toggle(project)}
+          />
+          <button
+            type="button"
+            className={styles.nameButton}
+            onClick={() => actions.open(project.id)}
+          >
+            {project.name}
+          </button>
+          <ProgressBadge done={project.subtask_done} total={project.subtask_total} />
+        </div>
       );
+    }
     case 'description':
       return (
         <div className={styles.stack}>
-          <ExpandableText text={project.description} />
+          <ExpandableText text={project.description} markdown />
           {project.ongoing_issue && (
             <div className={styles.issue}>
               <span className={styles.issueLabel}>Issue: </span>
-              <ExpandableText text={project.ongoing_issue} />
+              <ExpandableText text={project.ongoing_issue} markdown />
             </div>
           )}
         </div>
@@ -53,7 +69,7 @@ function Cell({ id, ctx }: { id: ColumnId; ctx: CellContext<Project, unknown> })
         />
       );
     case 'status_notes':
-      return <ExpandableText text={project.status_notes} />;
+      return <ExpandableText text={project.status_notes} markdown />;
     case 'plan_date':
     case 'projected_start_date':
       return (

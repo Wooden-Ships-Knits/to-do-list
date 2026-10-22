@@ -11,7 +11,8 @@
   min-width: 0;
 }
 
-.field > label {
+.field > label,
+.label {
   font-weight: 600;
   font-size: 13px;
 }

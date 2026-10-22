@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.errors import error_response, register_error_handlers
 from app.logging_config import configure_logging
-from app.routers import misc, persons, projects
+from app.routers import misc, persons, projects, tasks
 
 log = logging.getLogger("app.request")
 
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(misc.router, prefix=api)
     app.include_router(projects.router, prefix=api)
     app.include_router(persons.router, prefix=api)
+    app.include_router(tasks.router, prefix=api)
     return app
 
 
