@@ -6,7 +6,9 @@ import type { QueryParams } from '../../api/client';
 import type { Category, Project } from '../../api/types';
 import { CATEGORIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
+import { ExpandableText } from '../../components/ui/ExpandableText';
 import { CardSkeleton } from '../../components/ui/Skeleton';
+import { StageIcon } from '../../components/ui/StageIcon';
 import { CategoryTag, StatusBadge } from '../../components/ui/Tag';
 import { formatDate } from '../../lib/dates';
 import { COLUMN_LABELS } from '../../lib/columnSettings';
@@ -101,6 +103,7 @@ function Card({ project, manual, moves }: CardProps) {
           <DragHandle name={project.name} disabled />
         )}
         <h3 className={styles.name}>
+          <StageIcon name={project.stage.name} />{' '}
           <span className={`${styles.number} num`} data-testid="card-number">
             {project.number === null ? '' : `${project.number}.`}
           </span>{' '}
@@ -121,6 +124,12 @@ function Card({ project, manual, moves }: CardProps) {
           triggerClassName={styles.more}
         />
       </div>
+      {(project.description || project.ongoing_issue) && (
+        <div className={styles.description} data-testid="card-description">
+          {!project.description && <span className={styles.issueLabel}>Issue: </span>}
+          <ExpandableText text={project.description || project.ongoing_issue} markdown />
+        </div>
+      )}
       <div className={styles.tags}>
         <CategoryTag category={project.category} />
         <StatusBadge status={project.deadline_status} />

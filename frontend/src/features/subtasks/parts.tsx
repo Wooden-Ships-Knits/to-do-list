@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { AlignLeft, ChevronDown, ChevronRight, CornerDownLeft, ListTree, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { Task } from '../../api/types';
 import { Menu } from '../../components/ui/Menu';
@@ -65,7 +65,7 @@ export function FoldToggle({
   );
 }
 
-/** "2/4" next to a project name (the full sentence is there for screen readers). */
+/** Subtask icon and "2/4" next to a project name (the full sentence is for screen readers). */
 export function ProgressBadge({ done, total }: { done: number; total: number }) {
   if (total === 0) return null;
   const complete = done === total;
@@ -73,13 +73,25 @@ export function ProgressBadge({ done, total }: { done: number; total: number }) 
     <span
       className={`${styles.badge} ${complete ? styles.badgeDone : ''} num`}
       data-testid="subtask-badge"
+      title={`${done} of ${total} subtasks done`}
     >
+      <ListTree size={14} strokeWidth={1.75} aria-hidden="true" />
       <span aria-hidden="true">
         {done}/{total}
       </span>
       <span className="sr-only">
         , {done} of {total} subtasks done
       </span>
+    </span>
+  );
+}
+
+/** Lines icon after a name when there is a description or notes (as in ClickUp). */
+export function NotesMark() {
+  return (
+    <span className={styles.notesMark} title="Has notes">
+      <AlignLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+      <span className="sr-only">, has notes</span>
     </span>
   );
 }
@@ -93,6 +105,7 @@ export function AddTaskInput({
   startOpen = false,
   onClose,
   indent = 0,
+  withButtons = false,
 }: {
   projectId: string;
   parentId: string | null;
@@ -100,6 +113,8 @@ export function AddTaskInput({
   startOpen?: boolean;
   onClose?: () => void;
   indent?: number;
+  /** ClickUp-style row: an empty status circle, the name box, Cancel and Save buttons. */
+  withButtons?: boolean;
 }) {
   const actions = useTaskActions();
   const [open, setOpen] = useState(startOpen);
@@ -153,7 +168,8 @@ export function AddTaskInput({
     );
   }
   return (
-    <div className={styles.addForm} style={style}>
+    <div className={`${styles.addForm} ${withButtons ? styles.addRowForm : ''}`} style={style}>
+      {withButtons && <span className={styles.addCircle} aria-hidden="true" />}
       <input
         className={styles.addInput}
         aria-label={`Name of the new subtask in ${parentName}`}
@@ -177,10 +193,22 @@ export function AddTaskInput({
             close();
           }
         }}
-        onBlur={() => {
+        onBlur={(event) => {
+          // Leaving for the Cancel / Save buttons is not leaving the form.
+          if (withButtons && event.relatedTarget?.closest('[data-add-actions]')) return;
           if (!name.trim() && !busy) close();
         }}
       />
+      {withButtons && (
+        <span className={styles.addActions} data-add-actions>
+          <button type="button" className={styles.addCancel} onClick={close}>
+            Cancel
+          </button>
+          <button type="button" className={styles.addSave} onClick={save} disabled={busy}>
+            Save <CornerDownLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+          </button>
+        </span>
+      )}
       {error && (
         <span className={styles.addError} role="alert">
           {error}

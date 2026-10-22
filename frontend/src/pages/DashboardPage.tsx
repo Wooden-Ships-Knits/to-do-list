@@ -1,10 +1,11 @@
-import { Menu as MenuIcon, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { Layers, ListTree, Menu as MenuIcon, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { usePersons, useResultCount, useStages } from '../api/hooks';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Button } from '../components/ui/Button';
+import { Menu } from '../components/ui/Menu';
 import { Overlay } from '../components/ui/Overlay';
 import { useActions } from '../features/actions/ProjectActions';
 import { ProjectCards } from '../features/cards/ProjectCards';
@@ -23,6 +24,7 @@ import { Tabs } from '../features/Tabs';
 import { useScrollAnchor } from '../features/useScrollAnchor';
 import { DESKTOP_ORDER, TABLET_ORDER } from '../lib/columnSettings';
 import { CATEGORY_LABELS } from '../lib/status';
+import { expandedStore, useExpanded } from '../lib/expanded';
 import { useLayout } from '../lib/useLayout';
 import {
   activeFilterCount,
@@ -33,10 +35,17 @@ import {
   serializeView,
   sortParams,
 } from '../lib/view';
+import type { GroupBy } from '../lib/view';
 import topbar from '../features/layout/TopBar.module.css';
 import styles from './DashboardPage.module.css';
 
 const SIDEBAR_KEY = 'todo.sidebar';
+
+const GROUP_LABELS: Record<GroupBy, string> = {
+  category: 'Category',
+  stage: 'Stage',
+  none: 'None',
+};
 
 function readSidebar(): 'expanded' | 'rail' {
   try {
@@ -78,6 +87,7 @@ export function DashboardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<'expanded' | 'rail'>(readSidebar);
   const exportLink = useRef<HTMLAnchorElement>(null);
+  const expanded = useExpanded();
 
   useScrollAnchor(layout);
 
@@ -186,10 +196,7 @@ export function DashboardPage() {
         />
       </Overlay>
 
-      <div
-        className={styles.content}
-        data-panel={target && layout === 'desktop' ? 'open' : 'closed'}
-      >
+      <div className={styles.content} data-panel={target ? 'modal' : 'closed'}>
         <header className={`${styles.header} ${topbar.bar}`}>
           {layout === 'mobile' && (
             <button
@@ -234,17 +241,38 @@ export function DashboardPage() {
           {layout === 'mobile' && filtersButton}
           {isTable && (
             <>
-              <Button
-                aria-pressed={view.group}
-                className={view.group ? styles.on : undefined}
-                onClick={() => setView((v) => ({ ...v, group: !v.group }))}
+              <Menu
+                label={`Group: ${GROUP_LABELS[view.group]}`}
+                align="end"
+                triggerClassName={styles.chip}
+                trigger={
+                  <>
+                    <Layers size={14} strokeWidth={1.75} aria-hidden="true" />
+                    Group: {GROUP_LABELS[view.group]}
+                  </>
+                }
+                items={(['category', 'stage', 'none'] as const).map((g) => ({
+                  label: GROUP_LABELS[g],
+                  checked: view.group === g,
+                  onSelect: () => setView((v) => ({ ...v, group: g })),
+                }))}
+              />
+              <button
+                type="button"
+                className={`${styles.chip} ${expanded.all ? styles.chipOn : ''}`}
+                aria-pressed={expanded.all}
+                title={expanded.all ? 'Hide all subtasks' : 'Show all subtasks'}
+                onClick={() => expandedStore.setAll(!expanded.all)}
               >
-                Group by category
-              </Button>
+                <ListTree size={14} strokeWidth={1.75} aria-hidden="true" />
+                Subtasks
+              </button>
               <ColumnChooser
+                className={styles.chip}
                 order={tableLayout === 'tablet' ? TABLET_ORDER : DESKTOP_ORDER}
                 settings={columns.settings}
                 onChange={columns.setVisibility}
+                onNumberChange={columns.setShowNumber}
                 onReset={columns.reset}
               />
             </>

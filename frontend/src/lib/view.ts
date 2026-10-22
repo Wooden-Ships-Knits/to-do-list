@@ -27,6 +27,8 @@ export interface DateFilter {
   tbd: boolean;
 }
 
+export type GroupBy = 'category' | 'stage' | 'none';
+
 export interface ViewState {
   tab: 'all' | Category;
   category: Category[];
@@ -41,7 +43,8 @@ export interface ViewState {
   sort: SortKey | null;
   dir: SortDir;
   page: number;
-  group: boolean;
+  /** List grouping: by category (default, keeps manual order and numbers), by stage, or none. */
+  group: GroupBy;
 }
 
 export const DATE_KEYS: DateKey[] = ['plan', 'adj', 'eff', 'actual', 'start'];
@@ -86,7 +89,7 @@ export function defaultView(): ViewState {
     sort: null,
     dir: 'asc',
     page: 1,
-    group: true,
+    group: 'category',
   };
 }
 
@@ -130,7 +133,10 @@ export function parseView(sp: URLSearchParams): ViewState {
   }
   const page = Number(sp.get('page'));
   view.page = Number.isInteger(page) && page >= 1 ? page : 1;
-  view.group = sp.get('group') !== '0'; // grouped by category unless switched off
+  const group = sp.get('group');
+  // "0" is the old "grouping off" value, still accepted in shared links.
+  view.group =
+    group === 'stage' ? 'stage' : group === '0' || group === 'none' ? 'none' : 'category';
   return view;
 }
 
@@ -174,7 +180,8 @@ export function serializeView(
   }
   if (view.sort) sp.set('sort', `${view.dir === 'desc' ? '-' : ''}${view.sort}`);
   if (view.page > 1) sp.set('page', String(view.page));
-  if (!view.group) sp.set('group', '0');
+  if (view.group === 'none') sp.set('group', '0');
+  else if (view.group === 'stage') sp.set('group', 'stage');
   return sp;
 }
 

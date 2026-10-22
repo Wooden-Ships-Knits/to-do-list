@@ -6,7 +6,8 @@ import { COLUMN_LABELS, DEFAULT_WIDTHS, DESKTOP_ORDER } from '../../lib/columnSe
 import type { ColumnId } from '../../lib/columnSettings';
 import { formatDate } from '../../lib/dates';
 import type { Actions } from '../actions/ProjectActions';
-import { FoldToggle, ProgressBadge } from '../subtasks/parts';
+import { StageIcon } from '../../components/ui/StageIcon';
+import { FoldToggle, NotesMark, ProgressBadge } from '../subtasks/parts';
 import { DateCell, PicCell, StageCell } from './InlineEditors';
 import styles from './ProjectTable.module.css';
 
@@ -18,33 +19,51 @@ export interface TableMeta {
     isOpen: (project: Project) => boolean;
     toggle: (project: Project) => void;
   };
+  /** Show the description under the name (when the Description column is hidden). */
+  descriptionUnderName: boolean;
 }
 
 function Cell({ id, ctx }: { id: ColumnId; ctx: CellContext<Project, unknown> }) {
   const project = ctx.row.original;
-  const { actions, stages, persons, subtasks } = ctx.table.options.meta as TableMeta;
+  const { actions, stages, persons, subtasks, descriptionUnderName } = ctx.table.options
+    .meta as TableMeta;
   const label = COLUMN_LABELS[id];
   switch (id) {
     case 'category':
       return <CategoryTag category={project.category} />;
     case 'name': {
       const open = subtasks.isOpen(project);
+      // The description reads under the name, like a note on the task; an ongoing issue
+      // stands in when there is no description.
+      const preview = project.description || project.ongoing_issue;
       return (
-        <div className={styles.nameWrap}>
-          <FoldToggle
-            hidden={project.subtask_total === 0 && !open}
-            open={open}
-            label={`${open ? 'Hide' : 'Show'} subtasks of ${project.name}`}
-            onToggle={() => subtasks.toggle(project)}
-          />
-          <button
-            type="button"
-            className={styles.nameButton}
-            onClick={() => actions.open(project.id)}
-          >
-            {project.name}
-          </button>
-          <ProgressBadge done={project.subtask_done} total={project.subtask_total} />
+        <div className={styles.nameBlock}>
+          <div className={styles.nameWrap}>
+            <FoldToggle
+              hidden={project.subtask_total === 0 && !open}
+              open={open}
+              label={`${open ? 'Hide' : 'Show'} subtasks of ${project.name}`}
+              onToggle={() => subtasks.toggle(project)}
+            />
+            <StageIcon name={project.stage.name} />
+            <button
+              type="button"
+              className={styles.nameButton}
+              onClick={() => actions.open(project.id)}
+            >
+              {project.name}
+            </button>
+            <ProgressBadge done={project.subtask_done} total={project.subtask_total} />
+            {(project.description || project.status_notes || project.ongoing_issue) && (
+              <NotesMark />
+            )}
+          </div>
+          {descriptionUnderName && preview && (
+            <div className={styles.namePreview} data-testid="name-description">
+              {!project.description && <span className={styles.issueLabel}>Issue: </span>}
+              <ExpandableText text={preview} markdown />
+            </div>
+          )}
         </div>
       );
     }

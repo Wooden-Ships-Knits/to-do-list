@@ -1,0 +1,76 @@
+.split {
+  --detail-pad-x: var(--s4);
+}
+
+.column {
+  min-width: 0;
+}
+
+/* The Delete / Save bar: last thing in the pop-up, pinned to its bottom edge. */
+.footer {
+  position: sticky;
+  bottom: calc(-1 * var(--s4));
+  z-index: 1;
+  margin: var(--s4) calc(-1 * var(--s4)) calc(-1 * var(--s4));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.footer:empty {
+  display: none;
+}
+
+.side {
+  margin-top: var(--s5);
+}
+
+@media (min-width: 1024px) {
+  .split {
+    --detail-pad-x: var(--s6);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+  }
+
+  .withSide {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  }
+
+  .column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--s5) var(--detail-pad-x);
+  }
+
+  .footer {
+    position: static;
+    flex: none;
+    margin: 0;
+  }
+
+  .side {
+    margin-top: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--s4);
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* The history column starts at the top: no separator above it. */
+  .side > section {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+}

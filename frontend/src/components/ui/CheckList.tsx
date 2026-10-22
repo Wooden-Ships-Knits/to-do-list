@@ -11,6 +11,8 @@ interface CheckListProps {
   selected: string[];
   onChange: (next: string[]) => void;
   hideLegend?: boolean;
+  /** Options side by side (wrapping) instead of one per line. */
+  inline?: boolean;
   /** Test/automation hook. */
   name?: string;
 }
@@ -23,6 +25,7 @@ export function CheckList({
   selected,
   onChange,
   hideLegend,
+  inline = false,
   name,
 }: CheckListProps) {
   const toggle = (value: string): void => {
@@ -31,7 +34,7 @@ export function CheckList({
   return (
     <fieldset className={styles.fieldset} data-name={name}>
       <legend className={hideLegend ? 'sr-only' : styles.legend}>{legend}</legend>
-      <div className={styles.list}>
+      <div className={`${styles.list} ${inline ? styles.inline : ''}`}>
         {options.map((o) => (
           <label key={o.value} className={styles.option}>
             <input

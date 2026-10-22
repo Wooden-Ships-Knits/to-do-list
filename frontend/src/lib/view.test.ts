@@ -24,7 +24,7 @@ describe('view <-> URL', () => {
     expect(view.sort).toBe('plan_date');
     expect(view.dir).toBe('desc');
     expect(view.page).toBe(3);
-    expect(view.group).toBe(false);
+    expect(view.group).toBe('none');
     expect(view.dates.plan).toEqual({ from: '2026-10-01', to: '2026-10-31', tbd: true });
     const again = parse(serializeView(view).toString());
     expect(again).toEqual(view);
@@ -58,11 +58,14 @@ describe('view <-> URL', () => {
 });
 
 describe('grouping', () => {
-  it('is on by default and can be switched off in the URL', () => {
-    expect(parse('').group).toBe(true);
-    expect(parse('group=1').group).toBe(true);
-    expect(parse('group=0').group).toBe(false);
-    expect(serializeView({ ...defaultView(), group: false }).get('group')).toBe('0');
+  it('is by category by default; stage or none are kept in the URL', () => {
+    expect(parse('').group).toBe('category');
+    expect(parse('group=1').group).toBe('category');
+    expect(parse('group=stage').group).toBe('stage');
+    expect(parse('group=0').group).toBe('none'); // old links
+    expect(parse('group=none').group).toBe('none');
+    expect(serializeView({ ...defaultView(), group: 'none' }).get('group')).toBe('0');
+    expect(serializeView({ ...defaultView(), group: 'stage' }).get('group')).toBe('stage');
     expect(serializeView(defaultView()).has('group')).toBe(false);
   });
 });

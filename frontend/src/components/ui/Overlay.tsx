@@ -5,7 +5,7 @@ import { useVisualViewportHeight } from '../../lib/useVisualViewport';
 import { CloseIcon, IconButton } from './Button';
 import styles from './Overlay.module.css';
 
-export type OverlayVariant = 'dialog' | 'bottom' | 'full' | 'drawer' | 'left' | 'panel';
+export type OverlayVariant = 'dialog' | 'modal' | 'bottom' | 'full' | 'drawer' | 'left' | 'panel';
 
 interface OverlayProps {
   open: boolean;
@@ -16,6 +16,8 @@ interface OverlayProps {
   footer?: ReactNode;
   /** Visually shown next to the title (e.g. a count). */
   subtitle?: string;
+  /** Extra buttons in the header, before Close. */
+  headerActions?: ReactNode;
   testId?: string;
 }
 
@@ -39,6 +41,7 @@ export function Overlay({
   variant,
   title,
   subtitle,
+  headerActions,
   children,
   footer,
   testId,
@@ -65,6 +68,13 @@ export function Overlay({
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape') {
       event.stopPropagation();
+      // Esc inside a text editor only leaves the editor; a second Esc closes, so a stray key
+      // press while writing never throws the text away.
+      const target = event.target as HTMLElement;
+      if (target !== surfaceRef.current && target.closest('[data-escape-leaves]')) {
+        surfaceRef.current?.focus();
+        return;
+      }
       onClose();
       return;
     }
@@ -91,7 +101,13 @@ export function Overlay({
   const content = (
     <div className={`${styles.root} ${styles[`root_${variant}`]}`} data-variant={variant}>
       {modal && variant !== 'full' && (
-        <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />
+        <div
+          className={styles.backdrop}
+          // Keep the focus inside the dialog (Esc and Tab keep working if closing is cancelled).
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onClose}
+          aria-hidden="true"
+        />
       )}
       <div
         ref={surfaceRef}
@@ -110,6 +126,7 @@ export function Overlay({
             </h2>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
           </div>
+          {headerActions && <div className={styles.headerActions}>{headerActions}</div>}
           <IconButton label="Close" onClick={onClose}>
             <CloseIcon size={14} />
           </IconButton>

@@ -40,6 +40,13 @@
   border-bottom: 1px solid var(--border);
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-left: auto;
+}
+
 .titleWrap {
   min-width: 0;
   display: flex;
@@ -86,6 +93,32 @@
   max-width: 460px;
   max-height: calc(var(--vvh) - 2 * var(--s4));
   border-radius: var(--radius-lg);
+}
+
+/* large centred pop-up for viewing / editing a project or subtask (ClickUp-style task view) */
+.modal {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1240px, calc(100% - 2 * var(--s6)));
+  height: calc(var(--vvh) - 2 * var(--s6));
+  border-radius: var(--radius-lg);
+  animation: fade 0.12s ease-out;
+}
+
+/* Desktop: the content lays out its own scrolling columns. */
+@media (min-width: 1024px) {
+  .modal .body {
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .modal {
+    width: calc(100% - 2 * var(--s4));
+    height: calc(var(--vvh) - 2 * var(--s4));
+  }
 }
 
 /* bottom sheet (mobile filters) */

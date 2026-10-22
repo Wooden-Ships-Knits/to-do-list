@@ -198,3 +198,22 @@
   color: var(--text-muted-aa);
   font-size: 12px;
 }
+
+/* Description (or the ongoing issue) under the name: 2 lines, "More" to read it all */
+.description {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s1);
+  min-width: 0;
+  color: var(--text-muted-aa);
+  font-size: 13px;
+}
+
+.description > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.issueLabel {
+  font-weight: 600;
+}

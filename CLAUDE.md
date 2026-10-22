@@ -126,12 +126,19 @@ Table (desktop)
   in this exact order, like the spreadsheet we used before, under a group header
   row labeled "Schedule" (it spans only the schedule columns that are visible).
   Column order is not user-changeable for these four columns
-- "#" is the first data column: narrow, right-aligned, tabular numbers. It is the
+- "#" (hidden by default since the ClickUp-style list, switch it on in "Columns") is the first
+  data column: narrow, right-aligned, tabular numbers. It is the
   row's position inside its category in manual order (Current 1..n, Pending 1..n,
   Maintenance 1..n), same as our weekly report. It never changes because filters or
   search hide other rows ("Current #3" is always the same project) and it updates
   immediately after a reorder. Mobile cards show it before the project name ("3.")
-- EVERY data column has a filter ("#" and the drag grip are not data and have none):
+- ClickUp-style list (decided later): rows on the page background, a status circle before each
+  name, subtask count and notes icons after it, uppercase group pills with "+". The yellow/grey
+  schedule cells stay. Default columns: Project, Stage, Plan Date, Actual Date, PIC, Deadline
+  Status; the others and "#" come back from "Columns". The description (or ongoing issue) shows
+  under each project name, 2 lines with "More", unless the Description column is switched on.
+  Column filters live in the Filters panel
+  (not in the headers):
   multi-select (Category, Stage, PIC, Deadline Status),
   text (Project, Description, Notes), date range (all dates, including "is TBD")
 - Global search (debounced 300ms), "Clear all filters" button,
@@ -142,7 +149,9 @@ Table (desktop)
   header returns to it
 - Grouped by category by default ("list view grouped by section"): each group header has
   a collapse caret, the coloured category pill and the count, and stays sticky under the
-  column header while its group scrolls. A toolbar toggle switches grouping off (URL: group=0)
+  column header while its group scrolls. A "Group:" menu switches to Category / Stage / None
+  (URL: group=stage, group=0); grouped by stage, rows cannot be dragged (a note says so). A
+  "Subtasks" toolbar button shows or hides every project's subtasks
 - "+ Add project" row at the bottom of each group: type only the name, Enter saves (stage
   Not Started, the rest is filled in later), Esc cancels
 - All filters, sort and tab are in the URL, so a view can be shared and survives reload
@@ -157,7 +166,12 @@ Table (desktop)
 - Stage is shown as a small pill with a coloured dot (the name is always written)
 - Optimistic updates with rollback and a clear error message on failure;
   on 409 conflict, show the latest data and let the user re-apply
-- Side panel on row click: all fields editable + activity history
+- Detail pop-up on row click (decided later: a large centred pop-up like ClickUp's task view,
+  replacing the side panel): big editable title, properties grid, Markdown fields, subtasks
+  (ClickUp-style table), Delete / Save in a bar at the very bottom. Activity history opens in a
+  right-hand column only from the "Activity" button. Clicking outside, Close or Esc close it
+  (Esc in an editor first just leaves the editor); with unsaved edits it asks "Discard
+  changes?" first
 - Create / edit form with validation messages next to the field
 - Delete with confirmation and an "Undo" toast (uses restore)
 - Move category (e.g. pending -> current) from the row menu ("Move to category...":
@@ -249,7 +263,8 @@ Mobile (< 640px)
 - Table becomes a stacked card list. Each card shows: number and project name,
   category tag, stage, deadline status badge, effective deadline (with "adjusted"
   marker if adjusted) and the Plan / Adjusted / Actual / PIC 2x2 grid described above.
-  Description and notes hidden until the card is opened.
+  The description (or the ongoing issue) shows under the name, 2 lines with "More" (decided
+  later); status notes stay hidden until the card is opened.
 - Tap a card -> full-screen detail sheet with all fields editable and activity history
 - No inline cell editing on mobile; editing happens in the detail sheet
 - Use native date inputs on mobile
@@ -273,7 +288,7 @@ Tablet (640px – 1023px)
   fixed order.
 - The grip, # and Project columns are sticky; horizontal scroll happens inside the
   table container only, never on the whole page
-- Side panel becomes an overlay drawer at 80% width
+- The detail pop-up fills the screen with a 16px margin (history below the fields)
 - Filters open in a side drawer instead of in column headers
 - Inline editing still available
 
@@ -422,7 +437,7 @@ Frontend:
   Use touch emulation (hasTouch: true, isMobile: true) for phone and tablet.
 - Mobile/tablet-specific tests: card list renders, detail sheet editing,
   filter bottom sheet and result count, chip removal, "Load more",
-  column chooser on tablet, drawer side panel, rotation keeps state
+  column chooser on tablet, detail pop-up, rotation keeps state
 - Automated check that document.scrollWidth <= viewport width on every
   page at every viewport (no horizontal page scroll)
 - Save a screenshot of every main screen at every viewport to

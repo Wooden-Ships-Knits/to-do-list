@@ -17,6 +17,17 @@
   flex-direction: column;
 }
 
+.inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0 var(--s1);
+}
+
+.inline .option {
+  border: 1px solid var(--border);
+  margin: 0 0 var(--s1);
+}
+
 .option {
   display: flex;
   align-items: center;

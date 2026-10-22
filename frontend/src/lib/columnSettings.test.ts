@@ -10,18 +10,20 @@ import {
 beforeEach(() => window.localStorage.clear());
 
 describe('column settings', () => {
-  it('tablet keeps Project, Stage, the four schedule columns and Deadline Status by default', () => {
-    const v = defaultSettings('tablet').visibility;
-    const visible = TABLET_ORDER.filter((id) => v[id]);
-    expect(visible).toEqual([
-      'name',
-      'stage',
-      'plan_date',
-      'adjusted_plan_date',
-      'actual_date',
-      'pic',
-      'deadline_status',
-    ]);
+  it('ClickUp-style defaults: Project, Stage, Plan, Actual, PIC, Deadline Status; no #', () => {
+    for (const layout of ['desktop', 'tablet'] as const) {
+      const s = defaultSettings(layout);
+      const order = layout === 'desktop' ? DESKTOP_ORDER : TABLET_ORDER;
+      expect(order.filter((id) => s.visibility[id])).toEqual([
+        'name',
+        'stage',
+        'plan_date',
+        'actual_date',
+        'pic',
+        'deadline_status',
+      ]);
+      expect(s.showNumber).toBe(false);
+    }
   });
   it('the schedule columns are always next to each other in this exact order', () => {
     for (const order of [DESKTOP_ORDER, TABLET_ORDER]) {
@@ -45,10 +47,11 @@ describe('column settings', () => {
       'deadline_status',
     ]);
   });
-  it('desktop shows the specified columns', () => {
-    const v = defaultSettings('desktop').visibility;
-    expect(v.description && v.status_notes && v.plan_date && v.projected_start_date).toBe(true);
-    expect(v.effective_deadline).toBe(false);
+  it('the other columns can be switched on and the # column is remembered', () => {
+    const s = defaultSettings('desktop');
+    expect(s.visibility.description || s.visibility.category).toBe(false);
+    saveSettings('desktop', { ...s, showNumber: true });
+    expect(loadSettings('desktop').showNumber).toBe(true);
   });
   it('persists and restores choices per layout', () => {
     const s = defaultSettings('desktop');
@@ -57,7 +60,7 @@ describe('column settings', () => {
     saveSettings('desktop', s);
     expect(loadSettings('desktop').visibility.description).toBe(false);
     expect(loadSettings('desktop').sizing.name).toBe(300);
-    expect(loadSettings('tablet').visibility.description).toBe(false); // default for tablet is hidden anyway
+    expect(loadSettings('tablet').visibility.description).toBe(false); // hidden by default
     expect(loadSettings('tablet').sizing.name).toBeUndefined();
   });
   it('survives corrupt storage', () => {

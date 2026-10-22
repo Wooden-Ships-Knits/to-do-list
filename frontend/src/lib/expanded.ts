@@ -4,13 +4,27 @@ import { useSyncExternalStore } from 'react';
 export const EXPANDED_KEY = 'todo.expanded';
 
 export interface ExpandedState {
-  /** Projects whose subtasks are shown in the list. */
+  /** "Subtasks" in the toolbar: every project with subtasks shows them. */
+  all: boolean;
+  /** Projects opened by hand. */
   projects: string[];
+  /** Projects closed by hand (wins over `all` and over a search match). */
+  closedProjects: string[];
   /** Subtasks whose own subtasks are hidden (subtasks start unfolded). */
   collapsedTasks: string[];
 }
 
-const EMPTY: ExpandedState = { projects: [], collapsedTasks: [] };
+const EMPTY: ExpandedState = { all: false, projects: [], closedProjects: [], collapsedTasks: [] };
+
+/** Should this project show its subtasks? `matched`: a subtask matches the search / PIC. */
+export function isProjectOpen(
+  state: ExpandedState,
+  project: { id: string; subtask_total: number },
+  matched = false,
+): boolean {
+  if (state.closedProjects.includes(project.id)) return false;
+  return state.projects.includes(project.id) || matched || (state.all && project.subtask_total > 0);
+}
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === 'string');
@@ -21,7 +35,9 @@ export function parseExpanded(raw: string | null): ExpandedState {
   try {
     const data = JSON.parse(raw) as Partial<ExpandedState>;
     return {
+      all: data.all === true,
       projects: isStringArray(data.projects) ? data.projects : [],
+      closedProjects: isStringArray(data.closedProjects) ? data.closedProjects : [],
       collapsedTasks: isStringArray(data.collapsedTasks) ? data.collapsedTasks : [],
     };
   } catch {
@@ -62,15 +78,15 @@ export const expandedStore = {
     return () => listeners.delete(listener);
   },
   setProject(id: string, open: boolean): void {
-    write({ ...state, projects: toggleIn(state.projects, id, open) });
+    write({
+      ...state,
+      projects: toggleIn(state.projects, id, open),
+      closedProjects: toggleIn(state.closedProjects, id, !open),
+    });
   },
-  setProjects(ids: string[], open: boolean): void {
-    const set = new Set(state.projects);
-    for (const id of ids) {
-      if (open) set.add(id);
-      else set.delete(id);
-    }
-    write({ ...state, projects: [...set] });
+  /** The toolbar's "Subtasks": show or hide the subtasks of every project. */
+  setAll(all: boolean): void {
+    write({ ...state, all, projects: [], closedProjects: [] });
   },
   setTaskFolded(id: string, folded: boolean): void {
     write({ ...state, collapsedTasks: toggleIn(state.collapsedTasks, id, folded) });

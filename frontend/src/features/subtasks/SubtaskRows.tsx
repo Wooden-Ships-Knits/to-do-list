@@ -16,7 +16,7 @@ import { ancestorIds, visibleTasks } from '../../lib/tasks';
 import { DragHandle } from '../dnd/DragHandle';
 import { DateCell, PicCell, StageCell } from '../table/InlineEditors';
 import table from '../table/ProjectTable.module.css';
-import { AddTaskInput, DoneCheckbox, FoldToggle, TaskMenu } from './parts';
+import { AddTaskInput, DoneCheckbox, FoldToggle, NotesMark, TaskMenu } from './parts';
 import { useTaskActions } from './TaskActions';
 import { useTaskDnd } from './useTaskDnd';
 import styles from './SubtaskRows.module.css';
@@ -26,6 +26,8 @@ interface Props {
   project: Project;
   columns: ColumnId[];
   colSpan: number;
+  /** The "#" column is shown (subtask rows leave it empty). */
+  showNumber: boolean;
   stages: Stage[];
   persons: Person[];
   /** Subtasks that match the search / PIC filter. */
@@ -43,6 +45,7 @@ const isEmpty = (id: string, t: Task): boolean =>
 
 interface RowProps {
   task: Task;
+  showNumber: boolean;
   all: Task[];
   columns: ColumnId[];
   stages: Stage[];
@@ -56,6 +59,7 @@ interface RowProps {
 
 function TaskRow({
   task,
+  showNumber,
   all,
   columns,
   stages,
@@ -101,6 +105,7 @@ function TaskRow({
               <span className="sr-only">Subtask: </span>
               {task.name}
             </button>
+            {task.notes && <NotesMark />}
           </div>
         );
       case 'stage':
@@ -191,7 +196,7 @@ function TaskRow({
           {...listeners}
         />
       </td>
-      <td className={table.numberCell} data-fixed="number" />
+      {showNumber && <td className={table.numberCell} data-fixed="number" />}
       {columns.map((id) => {
         const schedule = (SCHEDULE_COLUMNS as string[]).includes(id);
         const empty = schedule && isEmpty(id, task);
@@ -220,12 +225,14 @@ export function SubtaskRows({
   project,
   columns,
   colSpan,
+  showNumber,
   stages,
   persons,
   matches,
   adding,
   onAddingDone,
 }: Props) {
+  const lead = showNumber ? 2 : 1; // grip (and #) cells before the columns
   const query = useTasks(project.id);
   const { collapsedTasks } = useExpanded();
   const [addingUnder, setAddingUnder] = useState<string | null>(null);
@@ -266,6 +273,7 @@ export function SubtaskRows({
             <Fragment key={task.id}>
               <TaskRow
                 task={task}
+                showNumber={showNumber}
                 all={all}
                 columns={columns}
                 stages={stages}
@@ -282,8 +290,8 @@ export function SubtaskRows({
               />
               {addingUnder === task.id && task.depth < TASK_MAX_DEPTH && (
                 <tr className={styles.addRow}>
-                  <td colSpan={2} />
-                  <td colSpan={colSpan - 2}>
+                  <td colSpan={lead} />
+                  <td colSpan={colSpan - lead}>
                     <AddTaskInput
                       projectId={project.id}
                       parentId={task.id}
@@ -300,8 +308,8 @@ export function SubtaskRows({
         </SortableContext>,
       )}
       <tr className={styles.addRow} data-add-subtask={project.id}>
-        <td colSpan={2} />
-        <td colSpan={colSpan - 2}>
+        <td colSpan={lead} />
+        <td colSpan={colSpan - lead}>
           <AddTaskInput
             key={adding ? 'adding' : 'idle'}
             projectId={project.id}

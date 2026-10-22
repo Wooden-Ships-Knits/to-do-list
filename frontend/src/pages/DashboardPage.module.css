@@ -51,9 +51,34 @@
   min-width: 0;
 }
 
-.on {
+/* ClickUp-style toolbar chips: Group, Subtasks, Columns */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chip:hover {
   background: var(--surface-alt);
+}
+
+.chipOn {
   border-color: var(--accent);
+  background: var(--surface-alt);
+}
+
+@media (pointer: coarse) {
+  .chip {
+    min-height: var(--control-h);
+  }
 }
 
 .main {
@@ -76,10 +101,6 @@
     height: 100dvh;
     overflow: hidden;
   }
-}
-
-.content[data-panel='open'] {
-  padding-right: calc(440px + var(--s4));
 }
 
 /* Short landscape screens (a phone on its side): the page may scroll vertically so the table
