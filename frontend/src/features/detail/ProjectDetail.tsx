@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ApiError, useProject, useRestoreProject } from '../../api/hooks';
 import type { Category } from '../../api/types';
 import { Button } from '../../components/ui/Button';
@@ -7,8 +8,15 @@ import type { OverlayVariant } from '../../components/ui/Overlay';
 import { useToast } from '../../components/Toast';
 import type { Layout } from '../../lib/useLayout';
 import { useActions } from '../actions/ProjectActions';
+import { useTasks } from '../../api/taskHooks';
+import { SubtaskList } from '../subtasks/SubtaskList';
 import { ActivityList } from './ActivityList';
 import { ProjectForm } from './ProjectForm';
+
+// Opened on demand (a subtask's own view), so it is not part of the first download.
+const TaskDetail = lazy(() =>
+  import('../subtasks/TaskDetail').then((m) => ({ default: m.TaskDetail })),
+);
 
 const VARIANTS: Record<Layout, OverlayVariant> = {
   mobile: 'full',
@@ -32,11 +40,16 @@ export function ProjectDetail({ layout, target, defaultCategory }: Props) {
   const restore = useRestoreProject();
   const project = query.data;
   const variant = VARIANTS[layout];
+  const [searchParams] = useSearchParams();
+  const taskId = isNew ? null : searchParams.get('task');
+  const tasks = useTasks(isNew ? null : target, taskId !== null);
+  const taskName = taskId ? tasks.data?.find((t) => t.id === taskId)?.name : undefined;
 
   const title = useMemo(() => {
     if (isNew) return 'Add project';
+    if (taskId) return taskName ?? 'Subtask';
     return project?.name ?? 'Project';
-  }, [isNew, project?.name]);
+  }, [isNew, project?.name, taskId, taskName]);
 
   const notFound = query.error instanceof ApiError && query.error.status === 404;
 
@@ -81,7 +94,12 @@ export function ProjectDetail({ layout, target, defaultCategory }: Props) {
           </Button>
         </div>
       )}
-      {!isNew && project && !project.deleted_at && (
+      {!isNew && project && !project.deleted_at && taskId && (
+        <Suspense fallback={<p aria-live="polite">Loading...</p>}>
+          <TaskDetail projectId={project.id} projectName={project.name} taskId={taskId} />
+        </Suspense>
+      )}
+      {!isNew && project && !project.deleted_at && !taskId && (
         <>
           <ProjectForm
             key={project.id}
@@ -95,6 +113,7 @@ export function ProjectDetail({ layout, target, defaultCategory }: Props) {
               if (layout === 'mobile') actions.close();
             }}
           />
+          <SubtaskList projectId={project.id} parent={{ id: null, name: project.name, depth: 0 }} />
           <ActivityList projectId={project.id} />
         </>
       )}

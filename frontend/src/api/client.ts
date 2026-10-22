@@ -10,6 +10,10 @@ import type {
   ReorderBody,
   Stage,
   Summary,
+  Task,
+  TaskCreateBody,
+  TaskPatch,
+  TaskReorderBody,
 } from './types';
 
 const BASE = '/api/v1';
@@ -29,10 +33,15 @@ export class ApiError extends Error {
 
   /** Latest server copy, present on a 409 version_conflict. */
   get current(): Project | null {
+    return this.latest<Project>();
+  }
+
+  /** Latest server copy of whatever was edited (project or subtask) on a 409. */
+  latest<T>(): T | null {
     if (this.code !== 'version_conflict' || typeof this.details !== 'object' || !this.details) {
       return null;
     }
-    const current = (this.details as { current?: Project }).current;
+    const current = (this.details as { current?: T }).current;
     return current ?? null;
   }
 
@@ -96,6 +105,39 @@ export function toSearch(params: QueryParams): string {
   return text ? `?${text}` : '';
 }
 
+/** Subtask lists asked for in the same tick are fetched with one request
+ *  (GET /tasks?project=a&project=b), then handed back per project. */
+const taskBatch: {
+  ids: Set<string>;
+  waiting: { id: string; resolve: (t: Task[]) => void; reject: (e: unknown) => void }[];
+  timer: ReturnType<typeof setTimeout> | null;
+} = { ids: new Set(), waiting: [], timer: null };
+
+function flushTaskBatch(): void {
+  const waiting = taskBatch.waiting;
+  const ids = [...taskBatch.ids];
+  taskBatch.ids = new Set();
+  taskBatch.waiting = [];
+  taskBatch.timer = null;
+  request<Task[]>(`/tasks${toSearch(ids.map((id) => ['project', id]))}`).then(
+    (tasks) => {
+      for (const w of waiting) w.resolve(tasks.filter((t) => t.project_id === w.id));
+    },
+    (error: unknown) => {
+      for (const w of waiting) w.reject(error);
+    },
+  );
+}
+
+function batchedTasks(projectId: string): Promise<Task[]> {
+  return new Promise((resolve, reject) => {
+    taskBatch.ids.add(projectId);
+    taskBatch.waiting.push({ id: projectId, resolve, reject });
+    if (taskBatch.ids.size >= 100) flushTaskBatch();
+    else taskBatch.timer ??= setTimeout(flushTaskBatch, 0);
+  });
+}
+
 export const api = {
   meta: () => request<Meta>('/meta'),
   stages: () => request<Stage[]>('/stages'),
@@ -110,6 +152,16 @@ export const api = {
   reorder: (body: ReorderBody) => request<Project>('/projects/reorder', json('POST', body)),
   restoreProject: (id: string) => request<Project>(`/projects/${id}/restore`, { method: 'POST' }),
   activity: (id: string) => request<ActivityEntry[]>(`/projects/${id}/activity`),
+  /** Subtasks of one project in tree order (batched with other projects asked for at once). */
+  tasks: (projectId: string) => batchedTasks(projectId),
+  getTask: (id: string) => request<Task>(`/tasks/${id}`),
+  createTask: (projectId: string, body: TaskCreateBody) =>
+    request<Task>(`/projects/${projectId}/tasks`, json('POST', body)),
+  patchTask: (id: string, version: number, patch: TaskPatch) =>
+    request<Task>(`/tasks/${id}`, json('PATCH', { version, ...patch })),
+  deleteTask: (id: string) => request<void>(`/tasks/${id}`, { method: 'DELETE' }),
+  restoreTask: (id: string) => request<Task>(`/tasks/${id}/restore`, { method: 'POST' }),
+  reorderTask: (body: TaskReorderBody) => request<Task>('/tasks/reorder', json('POST', body)),
   importCsv: (file: File, dryRun: boolean) => {
     const form = new FormData();
     form.append('file', file);

@@ -1,0 +1,180 @@
+.wrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.wrap:focus-within {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 1px var(--focus-ring);
+}
+
+.wrap[data-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px var(--s1);
+  border-bottom: 1px solid var(--border);
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted-aa);
+}
+
+.tool:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.tool:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.fallback {
+  width: 100%;
+}
+
+/* ---- CodeMirror (classes come from the library and the live preview plugin) ---- */
+.editor :global(.cm-editor) {
+  color: var(--text);
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: inherit;
+  line-height: 1.45;
+}
+
+.editor :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+.editor :global(.cm-scroller) {
+  font-family: inherit;
+  line-height: inherit;
+  min-height: calc(var(--md-min-rows, 3) * 1.45em + 2 * var(--s2));
+}
+
+.editor :global(.cm-content) {
+  padding: var(--s2) 0;
+  caret-color: var(--text);
+}
+
+.editor :global(.cm-line) {
+  padding: 0 var(--s2);
+}
+
+.editor :global(.cm-cursor) {
+  border-left-color: var(--text);
+}
+
+.editor :global(.cm-selectionBackground),
+.editor :global(.cm-focused .cm-selectionBackground),
+.editor :global(.cm-content ::selection) {
+  background: var(--selection-bg) !important;
+}
+
+.editor :global(.cm-placeholder) {
+  color: var(--text-muted-aa);
+}
+
+.editor :global(.cm-md-h) {
+  font-weight: 600;
+}
+
+.editor :global(.cm-md-h1) {
+  font-size: 1.25em;
+}
+
+.editor :global(.cm-md-h2) {
+  font-size: 1.12em;
+}
+
+.editor :global(.cm-md-strong) {
+  font-weight: 600;
+}
+
+.editor :global(.cm-md-em) {
+  font-style: italic;
+}
+
+.editor :global(.cm-md-strike),
+.editor :global(.cm-md-task-done) {
+  text-decoration: line-through;
+  color: var(--text-muted-aa);
+}
+
+.editor :global(.cm-md-code) {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-raised);
+  border-radius: 3px;
+}
+
+.editor :global(.cm-md-codeblock) {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-raised);
+}
+
+.editor :global(.cm-md-link) {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.editor :global(.cm-md-quote) {
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted-aa);
+}
+
+.editor :global(.cm-md-bullet) {
+  display: inline-block;
+  width: 0.8em;
+  color: var(--text-muted-aa);
+}
+
+.editor :global(.cm-md-hr) {
+  display: inline-block;
+  width: 100%;
+  vertical-align: middle;
+  border-top: 1px solid var(--border-strong);
+}
+
+.editor :global(.cm-md-checkbox) {
+  width: 14px;
+  height: 14px;
+  margin: 0 var(--s1) 0 0;
+  vertical-align: -2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* 16px text on touch devices / phones so iOS does not zoom into the editor */
+@media (pointer: coarse), (max-width: 639.98px) {
+  .editor :global(.cm-editor) {
+    font-size: 16px;
+  }
+
+  .tool {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .editor :global(.cm-md-checkbox) {
+    width: 20px;
+    height: 20px;
+  }
+}

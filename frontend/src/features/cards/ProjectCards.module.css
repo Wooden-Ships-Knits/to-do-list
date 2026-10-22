@@ -190,3 +190,11 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.subtasks {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  color: var(--text-muted-aa);
+  font-size: 12px;
+}

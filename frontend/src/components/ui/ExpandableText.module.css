@@ -16,6 +16,16 @@
   white-space: pre-wrap;
 }
 
+/* Markdown has block content (lists, paragraphs), which line-clamp cannot cut: clamp by height. */
+.clampedBlock {
+  max-height: calc(2 * 1.45em);
+  overflow: hidden;
+}
+
+.fullBlock {
+  overflow-wrap: anywhere;
+}
+
 .toggle {
   padding: 0;
   border: 0;

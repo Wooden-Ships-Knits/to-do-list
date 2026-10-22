@@ -45,6 +45,74 @@ export interface Project {
   deadline_status: DeadlineStatus;
   /** 1-based position inside the category (manual order); does not depend on filters. */
   number: number | null;
+  /** Non-deleted subtasks at every level, and how many are done. */
+  subtask_total: number;
+  subtask_done: number;
+  /** Subtasks matching the search / PIC filter (list responses only). */
+  matching_task_ids: string[];
+}
+
+/** Deepest subtask level (project -> 1 -> 2 -> 3). */
+export const TASK_MAX_DEPTH = 3;
+
+export interface Task {
+  id: string;
+  project_id: string;
+  /** null = directly under the project. */
+  parent_id: string | null;
+  depth: number;
+  name: string;
+  /** Markdown */
+  notes: string;
+  stage_id: number;
+  stage: Stage;
+  plan_date: string | null;
+  adjusted_plan_date: string | null;
+  actual_date: string | null;
+  pics: Person[];
+  version: number;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  effective_deadline: string | null;
+  deadline_status: DeadlineStatus;
+}
+
+/** Body of PATCH /tasks/{id} without `version`. */
+export interface TaskPatch {
+  name?: string;
+  notes?: string;
+  stage_id?: number;
+  plan_date?: string | null;
+  adjusted_plan_date?: string | null;
+  actual_date?: string | null;
+  pic_ids?: string[];
+}
+
+export interface TaskCreateBody {
+  name: string;
+  parent_id?: string | null;
+  notes?: string;
+  stage_id?: number;
+  plan_date?: string | null;
+  adjusted_plan_date?: string | null;
+  actual_date?: string | null;
+  pic_ids?: string[];
+}
+
+/** Where a subtask goes: under parentId (null = the project), next to a sibling or at the end. */
+export interface TaskPlacement {
+  parentId: string | null;
+  beforeId?: string;
+  afterId?: string;
+}
+
+export interface TaskReorderBody {
+  task_id: string;
+  parent_id: string | null;
+  before_id?: string;
+  after_id?: string;
+  version: number;
 }
 
 export interface Page<T> {
@@ -78,6 +146,9 @@ export interface Meta {
 export interface ActivityEntry {
   id: number;
   project_id: string;
+  /** Set when the entry is about a subtask. */
+  task_id: string | null;
+  task_name: string | null;
   field: string;
   old_value: string | null;
   new_value: string | null;

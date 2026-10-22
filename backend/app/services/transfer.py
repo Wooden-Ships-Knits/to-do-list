@@ -3,7 +3,8 @@
 import csv
 import io
 import re
-from collections.abc import Sequence
+import uuid
+from collections.abc import Mapping, Sequence
 from datetime import date
 from typing import Any
 
@@ -67,9 +68,19 @@ EXPORT_COLUMNS = [
     "PIC",
     "Effective Deadline",
     "Deadline Status",
+    "Subtasks",
 ]
 # Export-only columns that are accepted (and ignored) on import so exports round-trip.
-DERIVED_HEADERS = {"effective deadline", "deadline status"}
+DERIVED_HEADERS = {"effective deadline", "deadline status", "subtasks"}
+SubtaskCounts = Mapping[uuid.UUID, tuple[int, int]]
+
+
+def subtask_label(counts: tuple[int, int]) -> str:
+    """'2 of 4 done' (written out so spreadsheets do not read "2/4" as a date)."""
+    total, done = counts
+    return f"{done} of {total} done" if total else ""
+
+
 DATE_FIELDS = ("plan_date", "adjusted_plan_date", "actual_date", "projected_start_date")
 
 
@@ -89,7 +100,7 @@ def _safe_cell(value: str) -> str:
     return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
 
 
-def _row_values(p: Project, today_: date) -> list[str | date | None]:
+def _row_values(p: Project, today_: date, counts: SubtaskCounts) -> list[str | date | None]:
     from app.deadline import deadline_status, effective_deadline
 
     status = deadline_status(p.actual_date, p.plan_date, p.adjusted_plan_date, today_)
@@ -108,10 +119,11 @@ def _row_values(p: Project, today_: date) -> list[str | date | None]:
         ", ".join(x.name for x in p.pics) or "TBD",
         effective_deadline(p.plan_date, p.adjusted_plan_date),
         STATUS_LABELS[status],
+        subtask_label(counts.get(p.id, (0, 0))),
     ]
 
 
-def export_csv(projects: Sequence[Project]) -> bytes:
+def export_csv(projects: Sequence[Project], counts: SubtaskCounts) -> bytes:
     today_ = today()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -120,13 +132,13 @@ def export_csv(projects: Sequence[Project]) -> bytes:
         writer.writerow(
             [
                 format_date(v) if isinstance(v, date) or v is None else _safe_cell(v)
-                for v in _row_values(p, today_)
+                for v in _row_values(p, today_, counts)
             ]
         )
     return b"\xef\xbb\xbf" + buffer.getvalue().encode("utf-8")
 
 
-def export_xlsx(projects: Sequence[Project]) -> bytes:
+def export_xlsx(projects: Sequence[Project], counts: SubtaskCounts) -> bytes:
     today_ = today()
     wb = Workbook()
     ws = wb.active
@@ -137,7 +149,8 @@ def export_xlsx(projects: Sequence[Project]) -> bytes:
         cell.font = Font(bold=True)
     ws.freeze_panes = "C2"
     for p in projects:
-        ws.append([_safe_cell(v) if isinstance(v, str) else v for v in _row_values(p, today_)])
+        values = _row_values(p, today_, counts)
+        ws.append([_safe_cell(v) if isinstance(v, str) else v for v in values])
     date_columns = {
         EXPORT_COLUMNS.index(c) + 1
         for c in EXPORT_COLUMNS
@@ -149,7 +162,7 @@ def export_xlsx(projects: Sequence[Project]) -> bytes:
                 cell.number_format = "ddd, mmm dd, yy"
                 if cell.value is None:
                     cell.value = "TBD"
-    widths = [12, 36, 50, 40, 18, 50, 18, 20, 18, 18, 24, 22, 20, 16]
+    widths = [12, 36, 50, 40, 18, 50, 18, 20, 18, 18, 24, 22, 20, 16, 14]
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     out = io.BytesIO()

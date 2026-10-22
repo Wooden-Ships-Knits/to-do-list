@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from app.clock import now_utc, today
 from app.errors import AppError
-from app.models import ActivityLog, Category, Person, Project, Stage
+from app.models import ActivityLog, Category, Person, Project, Stage, Task
 from app.queries import ProjectFilters, SortBy, SortDir, build_where, order_by
 from app.schemas import ProjectCreate, ProjectOut, ProjectPatch, ReorderRequest, StageOut
 
@@ -31,6 +31,27 @@ SIMPLE_FIELDS = (
 
 POSITION_GAP = 1000
 POSITION_LIMIT = 1_000_000_000
+
+
+def slot_position(positions: Sequence[int], index: int) -> tuple[int, bool]:
+    """Position for an item inserted at `index` into rows with these (sorted) positions, and
+    whether the gaps ran out so the rows have to be renumbered first."""
+    before = positions[index - 1] if index > 0 else None
+    after = positions[index] if index < len(positions) else None
+    rebalance = False
+    if before is None and after is None:
+        new_position = POSITION_GAP
+    elif before is None:
+        assert after is not None
+        new_position = after - POSITION_GAP
+    elif after is None:
+        new_position = before + POSITION_GAP
+    else:
+        new_position = (before + after) // 2
+        rebalance = new_position <= before or new_position >= after
+    if abs(new_position) > POSITION_LIMIT:
+        rebalance = True
+    return new_position, rebalance
 
 
 def next_position(session: Session, category: Category) -> int:
@@ -62,15 +83,44 @@ def number_map(session: Session, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, in
     return {row[0]: int(row[1]) for row in rows}
 
 
+def subtask_counts(session: Session, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, tuple[int, int]]:
+    """(non-deleted subtasks at every level, how many of them are done) per project.
+    A deleted subtask takes its children with it, so deleted_at alone is enough."""
+    if not ids:
+        return {}
+    rows = session.execute(
+        sa.select(Task.project_id, sa.func.count(), sa.func.count(Task.actual_date))
+        .where(Task.project_id.in_(list(ids)), Task.deleted_at.is_(None))
+        .group_by(Task.project_id)
+    )
+    return {row[0]: (int(row[1]), int(row[2])) for row in rows}
+
+
 def to_out(session: Session, project: Project) -> ProjectOut:
     number = number_map(session, [project.id]).get(project.id)
-    return ProjectOut.from_model(project, today(), number)
+    counts = subtask_counts(session, [project.id]).get(project.id, (0, 0))
+    return ProjectOut.from_model(project, today(), number, counts)
 
 
-def to_outs(session: Session, projects: Sequence[Project]) -> list[ProjectOut]:
-    numbers = number_map(session, [p.id for p in projects])
+def to_outs(
+    session: Session,
+    projects: Sequence[Project],
+    matches: dict[uuid.UUID, list[uuid.UUID]] | None = None,
+) -> list[ProjectOut]:
+    ids = [p.id for p in projects]
+    numbers = number_map(session, ids)
+    counts = subtask_counts(session, ids)
     today_ = today()
-    return [ProjectOut.from_model(p, today_, numbers.get(p.id)) for p in projects]
+    return [
+        ProjectOut.from_model(
+            p,
+            today_,
+            numbers.get(p.id),
+            counts.get(p.id, (0, 0)),
+            (matches or {}).get(p.id),
+        )
+        for p in projects
+    ]
 
 
 def _fmt(value: object) -> str | None:
@@ -79,13 +129,26 @@ def _fmt(value: object) -> str | None:
     return value.isoformat() if isinstance(value, date) else str(value)
 
 
-def _log(session: Session, project_id: uuid.UUID, field: str, old: object, new: object) -> None:
+def log_change(
+    session: Session,
+    project_id: uuid.UUID,
+    field: str,
+    old: object,
+    new: object,
+    task_id: uuid.UUID | None = None,
+) -> None:
     session.add(
-        ActivityLog(project_id=project_id, field=field, old_value=_fmt(old), new_value=_fmt(new))
+        ActivityLog(
+            project_id=project_id,
+            task_id=task_id,
+            field=field,
+            old_value=_fmt(old),
+            new_value=_fmt(new),
+        )
     )
 
 
-def _pic_names(persons: Sequence[Person]) -> str | None:
+def pic_names(persons: Sequence[Person]) -> str | None:
     return ", ".join(sorted(p.name for p in persons)) or None
 
 
@@ -205,7 +268,7 @@ def insert_project(
     project.pics = persons
     session.add(project)
     session.flush()
-    _log(session, project.id, "project", None, "created")
+    log_change(session, project.id, "project", None, "created")
     return project
 
 
@@ -262,7 +325,7 @@ def _apply_changes(session: Session, project: Project, payload: ProjectPatch) ->
         old = getattr(project, name)
         if new != old:
             setattr(project, name, new)
-            _log(session, project.id, name, old, new)
+            log_change(session, project.id, name, old, new)
             changed = True
 
     if project.category != old_category:
@@ -270,18 +333,18 @@ def _apply_changes(session: Session, project: Project, payload: ProjectPatch) ->
 
     if "stage_id" in sent and payload.stage_id is not None and payload.stage_id != project.stage_id:
         stage = get_stage(session, payload.stage_id)
-        _log(session, project.id, "stage", project.stage.name, stage.name)
+        log_change(session, project.id, "stage", project.stage.name, stage.name)
         project.stage = stage
         changed = True
         if stage.name == DONE_STAGE and project.actual_date is None:
             default_actual = today()
             project.actual_date = default_actual
-            _log(session, project.id, "actual_date", None, default_actual)
+            log_change(session, project.id, "actual_date", None, default_actual)
 
     if "pic_ids" in sent and payload.pic_ids is not None:
         persons = get_persons(session, payload.pic_ids, already_assigned=project.pics)
         if {p.id for p in persons} != {p.id for p in project.pics}:
-            _log(session, project.id, "pics", _pic_names(project.pics), _pic_names(persons))
+            log_change(session, project.id, "pics", pic_names(project.pics), pic_names(persons))
             project.pics = persons
             changed = True
     return changed
@@ -318,7 +381,7 @@ def soft_delete(session: Session, project_id: uuid.UUID) -> None:
     now = now_utc()
     project.deleted_at = now
     project.updated_at = now
-    _log(session, project.id, "deleted_at", None, now)
+    log_change(session, project.id, "deleted_at", None, now)
     try:
         session.commit()
     except StaleDataError as exc:
@@ -333,7 +396,7 @@ def restore(session: Session, project_id: uuid.UUID) -> ProjectOut:
     old = project.deleted_at
     project.deleted_at = None
     project.updated_at = now_utc()
-    _log(session, project.id, "deleted_at", old, None)
+    log_change(session, project.id, "deleted_at", old, None)
     try:
         session.commit()
     except StaleDataError as exc:
@@ -408,21 +471,7 @@ def reorder_project(session: Session, payload: ReorderRequest) -> ProjectOut:
             if original == [*ids[:index], project.id, *ids[index:]]:
                 return to_out(session, project)  # already there: nothing to write
 
-        before = positions[index - 1] if index > 0 else None
-        after = positions[index] if index < len(ids) else None
-        rebalance = False
-        if before is None and after is None:
-            new_position = POSITION_GAP
-        elif before is None:
-            assert after is not None
-            new_position = after - POSITION_GAP
-        elif after is None:
-            new_position = before + POSITION_GAP
-        else:
-            new_position = (before + after) // 2
-            rebalance = new_position <= before or new_position >= after
-        if abs(new_position) > POSITION_LIMIT:
-            rebalance = True
+        new_position, rebalance = slot_position(positions, index)
 
         if rebalance:
             order = [*ids[:index], project.id, *ids[index:]]
@@ -445,7 +494,7 @@ def reorder_project(session: Session, payload: ReorderRequest) -> ProjectOut:
     except StaleDataError as exc:
         raise _conflict(session, project.id) from exc
     new_number = number_map(session, [project.id])[project.id]
-    _log(
+    log_change(
         session,
         project.id,
         "position",

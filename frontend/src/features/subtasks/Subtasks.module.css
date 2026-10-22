@@ -1,0 +1,115 @@
+/* Shared by the subtask rows in the table and the subtask list in the panel / sheet. */
+.check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.fold {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted-aa);
+}
+
+.fold:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.foldSpacer {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted-aa);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badgeDone {
+  color: var(--st-done-fg);
+  border-color: var(--st-done-fg);
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted-aa);
+}
+
+.addButton:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.addForm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  padding: 2px 0;
+}
+
+.addInput {
+  width: min(360px, 100%);
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.addError {
+  color: var(--danger);
+}
+
+/* A subtask that matches the search / PIC filter */
+.match {
+  background: var(--match-bg);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--match-bg);
+}
+
+@media (pointer: coarse) {
+  .fold,
+  .foldSpacer {
+    width: var(--control-h);
+    height: var(--control-h);
+  }
+
+  .check {
+    width: 22px;
+    height: 22px;
+  }
+
+  .addButton,
+  .addInput {
+    min-height: var(--control-h);
+  }
+}

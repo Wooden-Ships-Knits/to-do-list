@@ -18,6 +18,7 @@ const FIELD_LABELS: Record<string, string> = {
   deadline_note: 'Deadline note',
   pics: 'PIC',
   pic_ids: 'PIC',
+  notes: 'Notes',
 };
 
 const DATE_FIELDS = new Set([
@@ -37,7 +38,26 @@ function formatValue(field: string, value: string | null): string {
   return clip(value);
 }
 
+function describeTaskActivity(entry: ActivityEntry): string {
+  const who = `Subtask "${entry.task_name ?? '?'}"`;
+  if (entry.field === 'task') return `${who} added`;
+  if (entry.field === 'position') {
+    return `${who} moved from ${entry.old_value ?? '?'} to ${entry.new_value ?? '?'}`;
+  }
+  if (entry.field === 'deleted_at') return `${who} ${entry.new_value ? 'deleted' : 'restored'}`;
+  if (entry.field === 'name') {
+    return `Subtask renamed: ${clip(entry.old_value ?? '')} to ${clip(entry.new_value ?? '')}`;
+  }
+  if (entry.field === 'notes') return `${who}: notes updated`;
+  const label = FIELD_LABELS[entry.field] ?? entry.field;
+  if (entry.field === 'actual_date' && entry.old_value === null && entry.new_value) {
+    return `${who}: ${label} set to ${formatDate(entry.new_value)}`;
+  }
+  return `${who}: ${label} ${formatValue(entry.field, entry.old_value)} to ${formatValue(entry.field, entry.new_value)}`;
+}
+
 export function describeActivity(entry: ActivityEntry): string {
+  if (entry.task_id) return describeTaskActivity(entry);
   if (entry.field === 'project') return 'Project created';
   if (entry.field === 'position') {
     return `Moved from ${entry.old_value ?? '?'} to ${entry.new_value ?? '?'}`;

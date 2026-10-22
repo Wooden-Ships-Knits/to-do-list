@@ -2,7 +2,7 @@ import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-tabl
 import type { ColumnSizingState, Row, Updater, VisibilityState } from '@tanstack/react-table';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Plus } from 'lucide-react';
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { PAGE_SIZE, useCreateProject, useProjectsPage, useStages } from '../../api/hooks';
@@ -20,7 +20,9 @@ import {
   TABLET_ORDER,
 } from '../../lib/columnSettings';
 import type { ColumnId, ColumnSettings, TableLayout } from '../../lib/columnSettings';
+import { expandedStore, useExpanded } from '../../lib/expanded';
 import { CATEGORY_LABELS } from '../../lib/status';
+import { SubtaskRows } from '../subtasks/SubtaskRows';
 import { clearFilters, hasActiveFilters } from '../../lib/view';
 import type { SortKey, ViewState } from '../../lib/view';
 import type { QueryParams } from '../../api/client';
@@ -68,9 +70,10 @@ interface RowViewProps {
   row: Row<Project>;
   manual: boolean;
   moves: { up: (() => void) | null; down: (() => void) | null };
+  onAddSubtask: () => void;
 }
 
-function RowView({ row, manual, moves }: RowViewProps) {
+function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
   const actions = useActions();
   const p = row.original;
   const {
@@ -134,7 +137,12 @@ function RowView({ row, manual, moves }: RowViewProps) {
         );
       })}
       <td className={styles.actionsCell}>
-        <RowMenu project={p} actions={actions} order={manual ? moves : undefined} />
+        <RowMenu
+          project={p}
+          actions={actions}
+          order={manual ? moves : undefined}
+          onAddSubtask={onAddSubtask}
+        />
       </td>
     </tr>
   );
@@ -296,6 +304,29 @@ export function ProjectTable({
   );
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set());
   const manual = view.sort === null;
+  const expanded = useExpanded();
+  // Projects opened because a subtask matches the search / PIC filter, then closed by hand.
+  const [closedMatches, setClosedMatches] = useState<Set<string>>(new Set());
+  const [addingFor, setAddingFor] = useState<string | null>(null);
+  const isOpen = useCallback(
+    (p: Project) =>
+      expanded.projects.includes(p.id) ||
+      (p.matching_task_ids.length > 0 && !closedMatches.has(p.id)),
+    [expanded.projects, closedMatches],
+  );
+  const toggleOpen = useCallback(
+    (p: Project) => {
+      const open = isOpen(p);
+      expandedStore.setProject(p.id, !open);
+      setClosedMatches((current) => {
+        const next = new Set(current);
+        if (open) next.add(p.id);
+        else next.delete(p.id);
+        return next;
+      });
+    },
+    [isOpen],
+  );
 
   const order = layout === 'tablet' ? TABLET_ORDER : DESKTOP_ORDER;
   const visibility: VisibilityState = settings.visibility;
@@ -328,7 +359,12 @@ export function ProjectTable({
     enableColumnResizing: true,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
-    meta: { actions, stages, persons } satisfies TableMeta,
+    meta: {
+      actions,
+      stages,
+      persons,
+      subtasks: { isOpen, toggle: toggleOpen },
+    } satisfies TableMeta,
   });
 
   const toggleSort = useCallback(
@@ -410,6 +446,9 @@ export function ProjectTable({
   };
 
   const sortLabel = view.sort ? COLUMN_LABELS[view.sort as ColumnId] : null;
+  const withSubtasks = items.filter((p) => p.subtask_total > 0);
+  const allOpen = withSubtasks.length > 0 && withSubtasks.every(isOpen);
+  const columnIds = visibleColumns.map((c) => c.id as ColumnId);
 
   const headerCell = (id: ColumnId, rowSpan: number) => {
     const header = table.getHeaderGroups()[0]?.headers.find((h) => h.column.id === id);
@@ -425,6 +464,27 @@ export function ProjectTable({
         className={rowSpan === 1 ? styles.subHead : undefined}
       >
         <div className={styles.headerCell}>
+          {id === 'name' && withSubtasks.length > 0 && (
+            <button
+              type="button"
+              className={styles.filterButton}
+              aria-label={allOpen ? 'Hide all subtasks' : 'Show all subtasks'}
+              title={allOpen ? 'Hide all subtasks' : 'Show all subtasks'}
+              onClick={() => {
+                expandedStore.setProjects(
+                  withSubtasks.map((p) => p.id),
+                  !allOpen,
+                );
+                setClosedMatches(allOpen ? new Set(withSubtasks.map((p) => p.id)) : new Set());
+              }}
+            >
+              {allOpen ? (
+                <ChevronsDownUp size={16} strokeWidth={1.75} aria-hidden="true" />
+              ) : (
+                <ChevronsUpDown size={16} strokeWidth={1.75} aria-hidden="true" />
+              )}
+            </button>
+          )}
           {SORTABLE.has(id) ? (
             <button
               type="button"
@@ -542,8 +602,38 @@ export function ProjectTable({
                     moves={
                       category ? moveFor(segment.rows, index, category) : { up: null, down: null }
                     }
+                    onAddSubtask={() => {
+                      expandedStore.setProject(row.original.id, true);
+                      setClosedMatches((current) => {
+                        const next = new Set(current);
+                        next.delete(row.original.id);
+                        return next;
+                      });
+                      setAddingFor(row.original.id);
+                    }}
                   />
                 ));
+                // Subtasks sit right below their project; they are folded away while a
+                // project is being dragged (they move with it).
+                const withTasks = (nodes: typeof rowsNode) =>
+                  nodes.flatMap((node, index) => {
+                    const project = segment.rows[index]?.original;
+                    if (!project || dnd.activeProject || !isOpen(project)) return [node];
+                    return [
+                      node,
+                      <SubtaskRows
+                        key={`tasks-${project.id}`}
+                        project={project}
+                        columns={columnIds}
+                        colSpan={colSpan}
+                        stages={stages}
+                        persons={persons}
+                        matches={new Set(project.matching_task_ids)}
+                        adding={addingFor === project.id}
+                        onAddingDone={() => setAddingFor(null)}
+                      />,
+                    ];
+                  });
                 // A collapsed group hides its rows, except the one being dragged into it.
                 const activeOnly = rowsNode.filter((node) => node.key === dnd.activeProject?.id);
                 return (
@@ -569,10 +659,10 @@ export function ProjectTable({
                         items={dnd.containers[category]}
                         strategy={verticalListSortingStrategy}
                       >
-                        {isCollapsed ? activeOnly : rowsNode}
+                        {isCollapsed ? activeOnly : withTasks(rowsNode)}
                       </SortableContext>
                     ) : isCollapsed ? null : (
-                      rowsNode
+                      withTasks(rowsNode)
                     )}
                     {showHeader && category && !isCollapsed && (
                       <QuickAddRow category={category} colSpan={colSpan} />

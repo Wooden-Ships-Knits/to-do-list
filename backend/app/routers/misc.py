@@ -70,11 +70,12 @@ def export(
     if format not in ("csv", "xlsx"):
         raise AppError(400, "invalid_format", "format must be csv or xlsx")
     projects = project_svc.all_projects(session, filters, sort[0], sort[1])
+    counts = project_svc.subtask_counts(session, [p.id for p in projects])
     filename = f"projects-{today().isoformat()}.{format}"
     if format == "csv":
-        body, media = transfer.export_csv(projects), "text/csv; charset=utf-8"
+        body, media = transfer.export_csv(projects, counts), "text/csv; charset=utf-8"
     else:
-        body = transfer.export_xlsx(projects)
+        body = transfer.export_xlsx(projects, counts)
         media = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return Response(
         content=body,

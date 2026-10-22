@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql.expression import SQLColumnExpression
 
 from app.deadline import DUE_SOON_DAYS, DeadlineStatus
-from app.models import Category, Person, Project, Stage, project_pics
+from app.models import Category, Person, Project, Stage, Task, project_pics, task_pics
 
 DATE_FIELDS = (
     "plan_date",
@@ -100,6 +100,27 @@ def _date_clause(column: sa.ColumnElement[date], rng: DateRange) -> sa.ColumnEle
     return sa.and_(*in_range) if in_range else None
 
 
+def task_match_clauses(f: ProjectFilters) -> list[sa.ColumnElement[bool]]:
+    """Conditions on Task for the filters that also look inside subtasks: global search
+    (name, notes) and PIC. Empty when neither filter is active."""
+    clauses: list[sa.ColumnElement[bool]] = []
+    if f.search:
+        clauses.append(sa.or_(_contains(Task.name, f.search), _contains(Task.notes, f.search)))
+    if f.pic_ids:
+        clauses.append(
+            sa.exists().where(task_pics.c.task_id == Task.id, task_pics.c.person_id.in_(f.pic_ids))
+        )
+    return clauses
+
+
+def _has_task(*clauses: sa.ColumnElement[bool]) -> sa.ColumnElement[bool]:
+    return (
+        sa.exists()
+        .where(Task.project_id == Project.id, Task.deleted_at.is_(None), *clauses)
+        .correlate(Project)
+    )
+
+
 def build_where(f: ProjectFilters, today: date) -> list[sa.ColumnElement[bool]]:
     where: list[sa.ColumnElement[bool]] = [Project.deleted_at.is_(None)]
     if f.categories:
@@ -116,6 +137,14 @@ def build_where(f: ProjectFilters, today: date) -> list[sa.ColumnElement[bool]]:
                     project_pics.c.person_id.in_(f.pic_ids),
                 )
             )
+            # ...or a subtask of the project has one of these PICs.
+            parts.append(
+                _has_task(
+                    sa.exists().where(
+                        task_pics.c.task_id == Task.id, task_pics.c.person_id.in_(f.pic_ids)
+                    )
+                )
+            )
         if f.pic_none:
             parts.append(~has_pic)
         where.append(sa.or_(*parts))
@@ -128,6 +157,7 @@ def build_where(f: ProjectFilters, today: date) -> list[sa.ColumnElement[bool]]:
                 _contains(Project.description, f.search),
                 _contains(Project.status_notes, f.search),
                 _contains(Project.ongoing_issue, f.search),
+                _has_task(sa.or_(_contains(Task.name, f.search), _contains(Task.notes, f.search))),
             )
         )
     if f.name:

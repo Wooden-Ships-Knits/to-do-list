@@ -15,9 +15,12 @@ export function RowMenu({
   order,
   trigger,
   triggerClassName,
+  onAddSubtask,
 }: {
   project: Project;
   actions: Actions;
+  /** Opens the "Add subtask" box (table) or the project's sheet (cards). */
+  onAddSubtask?: () => void;
   /** Present only while the list is in manual order. */
   order?: OrderMoves;
   trigger?: React.ReactNode;
@@ -30,6 +33,11 @@ export function RowMenu({
       triggerClassName={triggerClassName}
       items={[
         { label: 'Edit', onSelect: () => actions.open(project.id) },
+        {
+          label: 'Add subtask',
+          hidden: !onAddSubtask,
+          onSelect: () => onAddSubtask?.(),
+        },
         {
           label: 'Move up',
           hidden: !order?.up,

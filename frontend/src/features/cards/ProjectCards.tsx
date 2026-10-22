@@ -18,6 +18,7 @@ import { DragHandle } from '../dnd/DragHandle';
 import { useRowDnd } from '../dnd/useRowDnd';
 import type { SetView } from '../filters/FilterFields';
 import { EmptyState, ErrorState } from '../shared';
+import { ProgressBadge } from '../subtasks/parts';
 import { RowMenu } from '../table/RowMenu';
 import styles from './ProjectCards.module.css';
 
@@ -115,6 +116,7 @@ function Card({ project, manual, moves }: CardProps) {
           project={project}
           actions={actions}
           order={manual ? moves : undefined}
+          onAddSubtask={() => actions.open(project.id)}
           trigger="More"
           triggerClassName={styles.more}
         />
@@ -123,6 +125,12 @@ function Card({ project, manual, moves }: CardProps) {
         <CategoryTag category={project.category} />
         <StatusBadge status={project.deadline_status} />
         <span className={styles.stage}>{project.stage.name}</span>
+        {project.subtask_total > 0 && (
+          <span className={styles.subtasks} data-testid="card-subtasks">
+            <ProgressBadge done={project.subtask_done} total={project.subtask_total} />
+            <span aria-hidden="true">subtasks</span>
+          </span>
+        )}
       </div>
       <div className={styles.deadline}>
         <span className={styles.deadlineLabel}>Deadline</span>

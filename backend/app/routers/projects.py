@@ -7,8 +7,18 @@ from sqlalchemy.orm import Session
 from app.db import get_session
 from app.deps import project_filters, sorting
 from app.queries import ProjectFilters, SortBy, SortDir
-from app.schemas import ActivityOut, Page, ProjectCreate, ProjectOut, ProjectPatch, ReorderRequest
+from app.schemas import (
+    ActivityOut,
+    Page,
+    ProjectCreate,
+    ProjectOut,
+    ProjectPatch,
+    ReorderRequest,
+    TaskCreate,
+    TaskOut,
+)
 from app.services import projects as svc
+from app.services import tasks as task_svc
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -26,8 +36,9 @@ def list_projects(
     page_size: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> Page[ProjectOut]:
     items, total = svc.list_projects(session, filters, sort[0], sort[1], page, page_size)
+    matches = task_svc.matching_task_ids(session, [p.id for p in items], filters)
     return Page[ProjectOut](
-        items=svc.to_outs(session, items),
+        items=svc.to_outs(session, items, matches),
         total=total,
         page=page,
         page_size=page_size,
@@ -68,4 +79,15 @@ def restore_project(project_id: uuid.UUID, session: SessionDep) -> ProjectOut:
 
 @router.get("/{project_id}/activity", response_model=list[ActivityOut])
 def project_activity(project_id: uuid.UUID, session: SessionDep) -> list[ActivityOut]:
-    return [ActivityOut.model_validate(a) for a in svc.activity(session, project_id)]
+    return [ActivityOut.from_model(a) for a in svc.activity(session, project_id)]
+
+
+@router.get("/{project_id}/tasks", response_model=list[TaskOut])
+def project_tasks(project_id: uuid.UUID, session: SessionDep) -> list[TaskOut]:
+    svc.fetch_active(session, project_id)
+    return [task_svc.to_out(t) for t in task_svc.list_tasks(session, [project_id])]
+
+
+@router.post("/{project_id}/tasks", response_model=TaskOut, status_code=201)
+def create_task(project_id: uuid.UUID, payload: TaskCreate, session: SessionDep) -> TaskOut:
+    return task_svc.create_task(session, project_id, payload)

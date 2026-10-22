@@ -9,7 +9,26 @@ export default defineConfig({
     port: 5173,
     proxy: { '/api': { target: proxyTarget, changeOrigin: true } },
   },
-  build: { sourcemap: false, target: 'es2022' },
+  build: {
+    sourcemap: false,
+    target: 'es2022',
+    rollupOptions: {
+      output: {
+        // React and the data libraries change rarely: their own chunk caches across releases and
+        // downloads in parallel with the app code.
+        manualChunks(id: string) {
+          if (
+            /node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run|@tanstack)\//.test(
+              id,
+            )
+          ) {
+            return 'vendor';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

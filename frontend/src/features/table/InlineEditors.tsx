@@ -11,6 +11,12 @@ import { formatDate } from '../../lib/dates';
 import { useMeta } from '../../api/hooks';
 import styles from './InlineEditors.module.css';
 
+/** A project or a subtask: both have a stage, PICs and the schedule dates. */
+export type EditableItem = Pick<
+  Project,
+  'id' | 'name' | 'stage_id' | 'stage' | 'pics' | 'plan_date' | 'adjusted_plan_date' | 'actual_date'
+> & { projected_start_date?: string | null };
+
 interface CellEditorProps<T> {
   label: string;
   display: ReactNode;
@@ -105,7 +111,7 @@ function EmptyMark() {
 }
 
 interface DateCellProps {
-  project: Project;
+  project: EditableItem;
   column: string;
   field: 'plan_date' | 'adjusted_plan_date' | 'actual_date' | 'projected_start_date';
   onSave: (value: string | null) => void;
@@ -142,7 +148,7 @@ export function StageCell({
   stages,
   onSave,
 }: {
-  project: Project;
+  project: EditableItem;
   stages: Stage[];
   onSave: (stageId: number) => void;
 }) {
@@ -181,7 +187,7 @@ export function PicCell({
   persons,
   onSave,
 }: {
-  project: Project;
+  project: EditableItem;
   persons: Person[];
   onSave: (ids: string[]) => void;
 }) {
