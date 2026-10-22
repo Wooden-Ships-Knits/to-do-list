@@ -28,7 +28,11 @@ export function useColumnSettings(layout: TableLayout) {
     (sizing: ColumnSettings['sizing']) => update({ ...settings, sizing }),
     [settings, update],
   );
+  const setShowNumber = useCallback(
+    (showNumber: boolean) => update({ ...settings, showNumber }),
+    [settings, update],
+  );
   const reset = useCallback(() => update(defaultSettings(layout)), [layout, update]);
 
-  return { settings, setVisibility, setSizing, reset };
+  return { settings, setVisibility, setSizing, setShowNumber, reset };
 }

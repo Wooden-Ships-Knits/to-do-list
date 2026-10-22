@@ -175,7 +175,8 @@ describe.each(THEMES)('%s theme: text contrast is at least WCAG AA (4.5:1)', (_n
     ['st-no-deadline-fg', 'st-no-deadline-bg'],
   ];
   it.each(pills)('pill text %s on %s over every row state', (fg, bg) => {
-    for (const row of ['surface', 'surface-alt', 'surface-raised']) {
+    // rows sit on the page background (ClickUp-style list), surface on hover
+    for (const row of ['bg', 'surface', 'surface-alt', 'surface-raised']) {
       expect(ratio(colour(t, fg), colour(t, bg, row))).toBeGreaterThanOrEqual(4.5);
     }
     // the overdue row: tint over surface, then the pill over that
@@ -188,6 +189,9 @@ describe.each(THEMES)('%s theme: text contrast is at least WCAG AA (4.5:1)', (_n
     expect(ratio(colour(t, 'text'), tinted)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(colour(t, 'text-muted-aa'), tinted)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(colour(t, 'done-text'), colour(t, 'surface'))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(colour(t, 'done-text'), colour(t, 'bg'))).toBeGreaterThanOrEqual(4.5);
+    const tintedBg = over(parse(t['overdue-tint'] as string), parse(t['bg'] as string));
+    expect(ratio(colour(t, 'text'), tintedBg)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(colour(t, 'done-text'), colour(t, 'surface-alt'))).toBeGreaterThanOrEqual(4.5);
   });
 

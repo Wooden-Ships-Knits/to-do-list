@@ -68,7 +68,7 @@ export const TABLET_ORDER: ColumnId[] = [
 
 export const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   category: 112,
-  name: 220,
+  name: 360,
   description: 280,
   stage: 140,
   status_notes: 280,
@@ -81,34 +81,29 @@ export const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   deadline_status: 128,
 };
 
-const DESKTOP_HIDDEN: ColumnId[] = ['effective_deadline'];
-const TABLET_VISIBLE: ColumnId[] = [
-  'name',
-  'stage',
-  'plan_date',
-  'adjusted_plan_date',
-  'actual_date',
-  'pic',
-  'deadline_status',
-];
+/** ClickUp-style list: a short set of columns by default (the rest from "Columns"). */
+const DEFAULT_VISIBLE: Record<TableLayout, ColumnId[]> = {
+  desktop: ['name', 'stage', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
+  tablet: ['name', 'stage', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
+};
 
 export type TableLayout = 'desktop' | 'tablet';
 
 export interface ColumnSettings {
   visibility: Record<ColumnId, boolean>;
   sizing: Partial<Record<ColumnId, number>>;
+  /** The "#" column (number inside the category): off by default, like ClickUp. */
+  showNumber: boolean;
 }
 
 export function defaultSettings(layout: TableLayout): ColumnSettings {
   const visibility = {} as Record<ColumnId, boolean>;
-  for (const id of DESKTOP_ORDER) {
-    visibility[id] =
-      layout === 'desktop' ? !DESKTOP_HIDDEN.includes(id) : TABLET_VISIBLE.includes(id);
-  }
-  return { visibility, sizing: {} };
+  for (const id of DESKTOP_ORDER) visibility[id] = DEFAULT_VISIBLE[layout].includes(id);
+  return { visibility, sizing: {}, showNumber: false };
 }
 
-const key = (layout: TableLayout): string => `todo.columns.v2.${layout}`;
+// v3: the ClickUp-style defaults replaced the full 12-column view.
+const key = (layout: TableLayout): string => `todo.columns.v3.${layout}`;
 
 export function loadSettings(layout: TableLayout): ColumnSettings {
   const base = defaultSettings(layout);
@@ -127,7 +122,8 @@ export function loadSettings(layout: TableLayout): ColumnSettings {
       const w = parsed.sizing?.[id];
       if (typeof w === 'number' && w >= 60 && w <= 800) sizing[id] = w;
     }
-    return { visibility, sizing };
+    const showNumber = typeof parsed.showNumber === 'boolean' ? parsed.showNumber : false;
+    return { visibility, sizing, showNumber };
   } catch {
     return base;
   }

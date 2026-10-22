@@ -142,7 +142,7 @@ export default function MarkdownEditorImpl({
   };
 
   return (
-    <div className={styles.wrap} data-invalid={invalid ? 'true' : undefined}>
+    <div className={styles.wrap} data-invalid={invalid ? 'true' : undefined} data-escape-leaves>
       <div className={styles.toolbar} role="toolbar" aria-label="Formatting" aria-controls={id}>
         {TOOLS.map((tool) => (
           <button

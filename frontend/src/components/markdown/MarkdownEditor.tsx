@@ -38,6 +38,7 @@ function Fallback({
       id={id}
       aria-labelledby={labelId}
       className={styles.fallback}
+      data-escape-leaves
       rows={minRows}
       value={value}
       onChange={(event) => onChange(event.target.value)}

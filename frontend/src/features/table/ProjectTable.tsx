@@ -2,14 +2,15 @@ import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-tabl
 import type { ColumnSizingState, Row, Updater, VisibilityState } from '@tanstack/react-table';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import type { KeyboardEvent, MouseEvent } from 'react';
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { PAGE_SIZE, useCreateProject, useProjectsPage, useStages } from '../../api/hooks';
 import type { Category, Person, Project, Stage } from '../../api/types';
 import { CATEGORIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { TableSkeleton } from '../../components/ui/Skeleton';
+import { StageIcon } from '../../components/ui/StageIcon';
 import { CategoryTag } from '../../components/ui/Tag';
 import { useToast } from '../../components/Toast';
 import {
@@ -20,9 +21,8 @@ import {
   TABLET_ORDER,
 } from '../../lib/columnSettings';
 import type { ColumnId, ColumnSettings, TableLayout } from '../../lib/columnSettings';
-import { expandedStore, useExpanded } from '../../lib/expanded';
+import { expandedStore, isProjectOpen, useExpanded } from '../../lib/expanded';
 import { CATEGORY_LABELS } from '../../lib/status';
-import { SubtaskRows } from '../subtasks/SubtaskRows';
 import { clearFilters, hasActiveFilters } from '../../lib/view';
 import type { SortKey, ViewState } from '../../lib/view';
 import type { QueryParams } from '../../api/client';
@@ -31,9 +31,9 @@ import { DragHandle } from '../dnd/DragHandle';
 import { useGroupDrop, useRowDnd } from '../dnd/useRowDnd';
 import type { SetView } from '../filters/FilterFields';
 import { EmptyState, ErrorState } from '../shared';
+import { SubtaskRows } from '../subtasks/SubtaskRows';
 import { projectColumns } from './ColumnCells';
 import type { TableMeta } from './ColumnCells';
-import { HeaderFilter } from './HeaderFilter';
 import { Pager } from './Pager';
 import { RowMenu } from './RowMenu';
 import styles from './ProjectTable.module.css';
@@ -68,12 +68,13 @@ function isEmptyCell(id: string, p: Project): boolean {
 
 interface RowViewProps {
   row: Row<Project>;
-  manual: boolean;
+  draggable: boolean;
+  showNumber: boolean;
   moves: { up: (() => void) | null; down: (() => void) | null };
   onAddSubtask: () => void;
 }
 
-function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
+function RowView({ row, draggable, showNumber, moves, onAddSubtask }: RowViewProps) {
   const actions = useActions();
   const p = row.original;
   const {
@@ -84,7 +85,7 @@ function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: p.id, disabled: !manual });
+  } = useSortable({ id: p.id, disabled: !draggable });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
     <tr
@@ -104,7 +105,7 @@ function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
       }}
     >
       <td className={styles.handleCell} data-fixed="handle">
-        {manual ? (
+        {draggable ? (
           <DragHandle
             name={p.name}
             disabled={false}
@@ -116,9 +117,11 @@ function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
           <DragHandle name={p.name} disabled />
         )}
       </td>
-      <td className={`${styles.numberCell} num`} data-fixed="number" data-testid="row-number">
-        {p.number ?? ''}
-      </td>
+      {showNumber && (
+        <td className={`${styles.numberCell} num`} data-fixed="number" data-testid="row-number">
+          {p.number ?? ''}
+        </td>
+      )}
       {row.getVisibleCells().map((cell) => {
         const id = cell.column.id;
         const schedule = (SCHEDULE_COLUMNS as string[]).includes(id);
@@ -140,7 +143,7 @@ function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
         <RowMenu
           project={p}
           actions={actions}
-          order={manual ? moves : undefined}
+          order={draggable ? moves : undefined}
           onAddSubtask={onAddSubtask}
         />
       </td>
@@ -148,59 +151,125 @@ function RowView({ row, manual, moves, onAddSubtask }: RowViewProps) {
   );
 }
 
-interface GroupRowProps {
-  category: Category;
+interface GroupHeaderProps {
+  label: ReactNode;
+  name: string;
   count: number;
   collapsed: boolean;
   colSpan: number;
   onToggle: () => void;
+  onAdd: () => void;
 }
 
-/** Group header: caret, coloured category pill and count. It sticks below the column header
- *  while its group scrolls, and it is a drop target, so rows can be dropped on a collapsed
- *  group. */
-function GroupRow({ category, count, collapsed, colSpan, onToggle }: GroupRowProps) {
-  const { setNodeRef, isOver } = useGroupDrop(category);
+/** ClickUp-style group header: caret, coloured pill, count and "+". */
+function GroupHeader({ label, name, count, collapsed, onToggle, onAdd }: GroupHeaderProps) {
   const Caret = collapsed ? ChevronRight : ChevronDown;
+  return (
+    <div className={styles.groupBar}>
+      <button
+        type="button"
+        className={styles.groupToggle}
+        aria-expanded={!collapsed}
+        aria-label={`${name}, ${count} ${count === 1 ? 'project' : 'projects'}`}
+        onClick={onToggle}
+      >
+        <Caret size={16} strokeWidth={1.75} aria-hidden="true" focusable="false" />
+        {label}
+        <span className={styles.groupCount} aria-hidden="true">
+          {count}
+        </span>
+      </button>
+      <button
+        type="button"
+        className={styles.groupAdd}
+        aria-label={`New project in ${name}`}
+        title={`New project in ${name}`}
+        onClick={onAdd}
+      >
+        <Plus size={14} strokeWidth={1.75} aria-hidden="true" focusable="false" />
+      </button>
+    </div>
+  );
+}
+
+/** Category group header. It sticks below the column header while its group scrolls, and it is
+ *  a drop target, so rows can be dropped on a collapsed group. */
+function CategoryGroupRow({
+  category,
+  ...rest
+}: Omit<GroupHeaderProps, 'label' | 'name'> & { category: Category }) {
+  const { setNodeRef, isOver } = useGroupDrop(category);
   return (
     <tr
       ref={setNodeRef}
       className={`${styles.groupRow} ${isOver ? styles.groupOver : ''}`}
       data-group={category}
     >
-      <td colSpan={colSpan}>
-        <button
-          type="button"
-          className={styles.groupToggle}
-          aria-expanded={!collapsed}
-          aria-label={`${CATEGORY_LABELS[category]}, ${count} ${count === 1 ? 'project' : 'projects'}`}
-          onClick={onToggle}
-        >
-          <Caret size={16} strokeWidth={1.75} aria-hidden="true" focusable="false" />
-          <CategoryTag category={category} />
-          <span className={styles.groupCount} aria-hidden="true">
-            {count}
-          </span>
-        </button>
+      <td colSpan={rest.colSpan}>
+        <GroupHeader
+          {...rest}
+          name={CATEGORY_LABELS[category]}
+          label={
+            <span className={styles.groupPill}>
+              <CategoryTag category={category} />
+            </span>
+          }
+        />
       </td>
     </tr>
   );
 }
 
-/** "+ Add project" at the bottom of a group: type the name, Enter saves, the rest is filled in later. */
-function QuickAddRow({ category, colSpan }: { category: Category; colSpan: number }) {
+function StageGroupRow({
+  stage,
+  ...rest
+}: Omit<GroupHeaderProps, 'label' | 'name'> & { stage: Stage }) {
+  return (
+    <tr className={styles.groupRow} data-group={`stage:${stage.name}`}>
+      <td colSpan={rest.colSpan}>
+        <GroupHeader
+          {...rest}
+          name={stage.name}
+          label={
+            <span className={`${styles.groupPill} ${styles.stagePill}`}>
+              <StageIcon name={stage.name} />
+              {stage.name}
+            </span>
+          }
+        />
+      </td>
+    </tr>
+  );
+}
+
+/** "+ Add project" at the bottom of a group: type the name, Enter saves, the rest is filled in
+ *  later. In a stage group the new project gets that stage. */
+function QuickAddRow({
+  category,
+  stage,
+  colSpan,
+  startOpen,
+  onClosed,
+}: {
+  category: Category;
+  stage?: Stage;
+  colSpan: number;
+  startOpen: boolean;
+  onClosed: () => void;
+}) {
   const toast = useToast();
   const { data: stages = [] } = useStages();
   const create = useCreateProject();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const label = CATEGORY_LABELS[category];
+  const label = stage ? stage.name : CATEGORY_LABELS[category];
 
   const cancel = (): void => {
     setOpen(false);
     setName('');
     setError(null);
+    onClosed();
   };
   const save = (): void => {
     const trimmed = name.trim();
@@ -208,13 +277,13 @@ function QuickAddRow({ category, colSpan }: { category: Category; colSpan: numbe
       setError('Enter a project name.');
       return;
     }
-    const stage = stages.find((x) => x.name === 'Not Started') ?? stages[0];
-    if (!stage) return;
+    const chosen = stage ?? stages.find((x) => x.name === 'Not Started') ?? stages[0];
+    if (!chosen) return;
     create.mutate(
       {
         name: trimmed,
         category,
-        stage_id: stage.id,
+        stage_id: chosen.id,
         description: '',
         status_notes: '',
         ongoing_issue: '',
@@ -236,7 +305,7 @@ function QuickAddRow({ category, colSpan }: { category: Category; colSpan: numbe
   };
 
   return (
-    <tr className={styles.addRow} data-add-row={category}>
+    <tr className={styles.addRow} data-add-row={stage ? `stage:${stage.name}` : category}>
       <td colSpan={colSpan}>
         {open ? (
           <div className={styles.addForm}>
@@ -287,6 +356,13 @@ function QuickAddRow({ category, colSpan }: { category: Category; colSpan: numbe
   );
 }
 
+interface Segment {
+  key: string;
+  category: Category | null;
+  stage: Stage | null;
+  rows: Row<Project>[];
+}
+
 export function ProjectTable({
   layout,
   params,
@@ -302,29 +378,21 @@ export function ProjectTable({
     params,
     view.page,
   );
-  const [collapsed, setCollapsed] = useState<Set<Category>>(new Set());
-  const manual = view.sort === null;
-  const expanded = useExpanded();
-  // Projects opened because a subtask matches the search / PIC filter, then closed by hand.
-  const [closedMatches, setClosedMatches] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [quickAdd, setQuickAdd] = useState<string | null>(null);
   const [addingFor, setAddingFor] = useState<string | null>(null);
+  const manual = view.sort === null;
+  // Manual order is per category, so rows can be dragged when grouped by category (or not
+  // grouped). Grouped by stage, the order inside a stage is not a stored order.
+  const draggable = manual && view.group !== 'stage';
+  const showNumber = settings.showNumber;
+  const expanded = useExpanded();
   const isOpen = useCallback(
-    (p: Project) =>
-      expanded.projects.includes(p.id) ||
-      (p.matching_task_ids.length > 0 && !closedMatches.has(p.id)),
-    [expanded.projects, closedMatches],
+    (p: Project) => isProjectOpen(expanded, p, p.matching_task_ids.length > 0),
+    [expanded],
   );
   const toggleOpen = useCallback(
-    (p: Project) => {
-      const open = isOpen(p);
-      expandedStore.setProject(p.id, !open);
-      setClosedMatches((current) => {
-        const next = new Set(current);
-        if (open) next.add(p.id);
-        else next.delete(p.id);
-        return next;
-      });
-    },
+    (p: Project) => expandedStore.setProject(p.id, !isOpen(p)),
     [isOpen],
   );
 
@@ -337,7 +405,7 @@ export function ProjectTable({
   }, [settings.sizing]);
 
   const items = useMemo(() => data?.items ?? [], [data]);
-  const dnd = useRowDnd({ items, enabled: manual, onMove: actions.reorder });
+  const dnd = useRowDnd({ items, enabled: draggable, onMove: actions.reorder });
 
   // TanStack Table returns unmemoizable functions; this component does not pass them to
   // memoized children, so the React Compiler skip is harmless here.
@@ -364,6 +432,7 @@ export function ProjectTable({
       stages,
       persons,
       subtasks: { isOpen, toggle: toggleOpen },
+      descriptionUnderName: !settings.visibility.description,
     } satisfies TableMeta,
   });
 
@@ -382,30 +451,45 @@ export function ProjectTable({
   const rowById = useMemo(() => new Map(rows.map((r) => [r.original.id, r])), [rows]);
 
   /** What to render, in order. Manual order follows the live drag layout; other sorts keep the
-   *  server order (grouped by category when "group by category" is on). */
-  const segments = useMemo((): { category: Category | null; rows: Row<Project>[] }[] => {
-    if (manual) {
+   *  server order, grouped by category or stage when grouping is on. */
+  const segments = useMemo((): Segment[] => {
+    if (view.group === 'stage') {
+      return stages
+        .map((stage) => ({
+          key: `stage:${stage.id}`,
+          category: null,
+          stage,
+          rows: rows.filter((r) => r.original.stage_id === stage.id),
+        }))
+        .filter((s) => s.rows.length > 0);
+    }
+    if (draggable) {
       return CATEGORIES.map((category) => ({
+        key: category,
         category,
+        stage: null,
         rows: dnd.containers[category]
           .map((id) => rowById.get(id))
           .filter((r): r is Row<Project> => !!r),
       }));
     }
-    if (view.group) {
+    if (view.group === 'category') {
       return CATEGORIES.map((category) => ({
+        key: category,
         category,
+        stage: null,
         rows: rows.filter((r) => r.original.category === category),
       }));
     }
-    return [{ category: null, rows }];
-  }, [manual, dnd.containers, rowById, rows, view.group]);
+    return [{ key: 'all', category: null, stage: null, rows }];
+  }, [view.group, stages, draggable, dnd.containers, rowById, rows]);
 
   const visibleColumns = table.getVisibleLeafColumns();
   const scheduleVisible = visibleColumns.filter((c) =>
     (SCHEDULE_COLUMNS as string[]).includes(c.id),
   );
-  const colSpan = visibleColumns.length + 3; // + grip, number, actions
+  const colSpan = visibleColumns.length + 2 + (showNumber ? 1 : 0); // + grip, actions (, #)
+  const columnIds = visibleColumns.map((c) => c.id as ColumnId);
 
   if (isPending) return <TableSkeleton columns={Math.min(visibleColumns.length + 2, 8)} />;
   if (isError) return <ErrorState message={error.message} onRetry={() => void refetch()} />;
@@ -446,45 +530,23 @@ export function ProjectTable({
   };
 
   const sortLabel = view.sort ? COLUMN_LABELS[view.sort as ColumnId] : null;
-  const withSubtasks = items.filter((p) => p.subtask_total > 0);
-  const allOpen = withSubtasks.length > 0 && withSubtasks.every(isOpen);
-  const columnIds = visibleColumns.map((c) => c.id as ColumnId);
 
   const headerCell = (id: ColumnId, rowSpan: number) => {
     const header = table.getHeaderGroups()[0]?.headers.find((h) => h.column.id === id);
     if (!header) return null;
     const active = view.sort === id;
+    // The name column takes the remaining width, like ClickUp's; the others have set widths.
+    const fluid = id === 'name';
     return (
       <th
         key={id}
         rowSpan={rowSpan}
-        style={{ width: header.getSize() }}
+        style={fluid ? undefined : { width: header.getSize() }}
         aria-sort={active ? (view.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
         data-col={id}
         className={rowSpan === 1 ? styles.subHead : undefined}
       >
         <div className={styles.headerCell}>
-          {id === 'name' && withSubtasks.length > 0 && (
-            <button
-              type="button"
-              className={styles.filterButton}
-              aria-label={allOpen ? 'Hide all subtasks' : 'Show all subtasks'}
-              title={allOpen ? 'Hide all subtasks' : 'Show all subtasks'}
-              onClick={() => {
-                expandedStore.setProjects(
-                  withSubtasks.map((p) => p.id),
-                  !allOpen,
-                );
-                setClosedMatches(allOpen ? new Set(withSubtasks.map((p) => p.id)) : new Set());
-              }}
-            >
-              {allOpen ? (
-                <ChevronsDownUp size={16} strokeWidth={1.75} aria-hidden="true" />
-              ) : (
-                <ChevronsUpDown size={16} strokeWidth={1.75} aria-hidden="true" />
-              )}
-            </button>
-          )}
           {SORTABLE.has(id) ? (
             <button
               type="button"
@@ -500,30 +562,38 @@ export function ProjectTable({
           ) : (
             <span>{COLUMN_LABELS[id]}</span>
           )}
-          {layout === 'desktop' && (
-            <HeaderFilter
-              column={id}
-              view={view}
-              setView={setView}
-              stages={stages}
-              persons={persons}
-            />
-          )}
         </div>
-        <button
-          type="button"
-          aria-label={`Resize ${COLUMN_LABELS[id]} column (arrow keys)`}
-          className={`${styles.resizer} ${header.column.getIsResizing() ? styles.resizing : ''}`}
-          onMouseDown={header.getResizeHandler()}
-          onTouchStart={header.getResizeHandler()}
-          onKeyDown={(event) => resizeKey(event, id, header.getSize())}
-        />
+        {!fluid && (
+          <button
+            type="button"
+            aria-label={`Resize ${COLUMN_LABELS[id]} column (arrow keys)`}
+            className={`${styles.resizer} ${header.column.getIsResizing() ? styles.resizing : ''}`}
+            onMouseDown={header.getResizeHandler()}
+            onTouchStart={header.getResizeHandler()}
+            onKeyDown={(event) => resizeKey(event, id, header.getSize())}
+          />
+        )}
       </th>
     );
   };
 
   const firstSchedule = scheduleVisible[0]?.id;
-  const totalWidth = table.getTotalSize() + HANDLE_WIDTH + NUMBER_WIDTH + ACTIONS_WIDTH;
+  const minWidth =
+    table.getTotalSize() + HANDLE_WIDTH + (showNumber ? NUMBER_WIDTH : 0) + ACTIONS_WIDTH;
+  const tableStyle = {
+    width: '100%',
+    minWidth,
+    '--name-left': `${HANDLE_WIDTH + (showNumber ? NUMBER_WIDTH : 0)}px`,
+  } as CSSProperties;
+  const tabCategory: Category = view.tab === 'all' ? 'current' : view.tab;
+
+  const toggleGroup = (key: string): void =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   return (
     <div className={styles.wrap} data-layout={layout}>
@@ -535,17 +605,28 @@ export function ProjectTable({
           </Button>
         </div>
       )}
+      {manual && view.group === 'stage' && (
+        <div className={styles.orderNote} role="status" data-testid="order-note">
+          <span>Grouped by stage. Group by category to rearrange.</span>
+          <Button onClick={() => setView((v) => ({ ...v, group: 'category' }))}>
+            Group by category
+          </Button>
+        </div>
+      )}
       {dnd.context(
         <div className={styles.scroll} data-testid="table-scroll" aria-busy={isPlaceholderData}>
           <table
             className={`${styles.table} ${layout === 'tablet' ? styles.sticky : ''}`}
-            style={{ width: totalWidth }}
+            style={tableStyle}
           >
             <colgroup>
               <col style={{ width: HANDLE_WIDTH }} />
-              <col style={{ width: NUMBER_WIDTH }} />
+              {showNumber && <col style={{ width: NUMBER_WIDTH }} />}
               {visibleColumns.map((column) => (
-                <col key={column.id} style={{ width: column.getSize() }} />
+                <col
+                  key={column.id}
+                  style={column.id === 'name' ? undefined : { width: column.getSize() }}
+                />
               ))}
               <col style={{ width: ACTIONS_WIDTH }} />
             </colgroup>
@@ -554,11 +635,13 @@ export function ProjectTable({
                 <th rowSpan={2} className={styles.handleHead} data-fixed="handle">
                   <span className="sr-only">Reorder</span>
                 </th>
-                <th rowSpan={2} className={styles.numberHead} data-fixed="number">
-                  <abbr title="Number within the category" className={styles.abbr}>
-                    #
-                  </abbr>
-                </th>
+                {showNumber && (
+                  <th rowSpan={2} className={styles.numberHead} data-fixed="number">
+                    <abbr title="Number within the category" className={styles.abbr}>
+                      #
+                    </abbr>
+                  </th>
+                )}
                 {visibleColumns.map((column) => {
                   const id = column.id as ColumnId;
                   if (!(SCHEDULE_COLUMNS as string[]).includes(id)) return headerCell(id, 2);
@@ -585,30 +668,28 @@ export function ProjectTable({
             </thead>
             <tbody>
               {segments.map((segment) => {
-                const category = segment.category;
-                const isCollapsed = category !== null && collapsed.has(category);
-                // In manual order every group keeps its header (even when empty), so the layout does not
-                // shift when a drag starts and an empty category can still receive a row.
+                const { category, stage, key } = segment;
+                const isCollapsed = collapsed.has(key);
+                // In manual order every category keeps its header (even when empty), so the
+                // layout does not shift when a drag starts and an empty category can still
+                // receive a row.
                 const showHeader =
-                  category !== null &&
-                  view.group &&
-                  (segment.rows.length > 0 ||
-                    (manual && view.tab === 'all' && view.category.length === 0));
+                  stage !== null ||
+                  (category !== null &&
+                    view.group === 'category' &&
+                    (segment.rows.length > 0 ||
+                      (draggable && view.tab === 'all' && view.category.length === 0)));
                 const rowsNode = segment.rows.map((row, index) => (
                   <RowView
                     key={row.id}
                     row={row}
-                    manual={manual}
+                    draggable={draggable}
+                    showNumber={showNumber}
                     moves={
                       category ? moveFor(segment.rows, index, category) : { up: null, down: null }
                     }
                     onAddSubtask={() => {
                       expandedStore.setProject(row.original.id, true);
-                      setClosedMatches((current) => {
-                        const next = new Set(current);
-                        next.delete(row.original.id);
-                        return next;
-                      });
                       setAddingFor(row.original.id);
                     }}
                   />
@@ -626,6 +707,7 @@ export function ProjectTable({
                         project={project}
                         columns={columnIds}
                         colSpan={colSpan}
+                        showNumber={showNumber}
                         stages={stages}
                         persons={persons}
                         matches={new Set(project.matching_task_ids)}
@@ -636,25 +718,27 @@ export function ProjectTable({
                   });
                 // A collapsed group hides its rows, except the one being dragged into it.
                 const activeOnly = rowsNode.filter((node) => node.key === dnd.activeProject?.id);
+                const headerProps = {
+                  count: segment.rows.length,
+                  collapsed: isCollapsed,
+                  colSpan,
+                  onToggle: () => toggleGroup(key),
+                  onAdd: () => {
+                    setCollapsed((current) => {
+                      const next = new Set(current);
+                      next.delete(key);
+                      return next;
+                    });
+                    setQuickAdd(key);
+                  },
+                };
                 return (
-                  <Fragment key={category ?? 'all'}>
+                  <Fragment key={key}>
+                    {showHeader && stage && <StageGroupRow stage={stage} {...headerProps} />}
                     {showHeader && category && (
-                      <GroupRow
-                        category={category}
-                        count={segment.rows.length}
-                        collapsed={isCollapsed}
-                        colSpan={colSpan}
-                        onToggle={() =>
-                          setCollapsed((current) => {
-                            const next = new Set(current);
-                            if (next.has(category)) next.delete(category);
-                            else next.add(category);
-                            return next;
-                          })
-                        }
-                      />
+                      <CategoryGroupRow category={category} {...headerProps} />
                     )}
-                    {manual && category ? (
+                    {draggable && category ? (
                       <SortableContext
                         items={dnd.containers[category]}
                         strategy={verticalListSortingStrategy}
@@ -664,8 +748,15 @@ export function ProjectTable({
                     ) : isCollapsed ? null : (
                       withTasks(rowsNode)
                     )}
-                    {showHeader && category && !isCollapsed && (
-                      <QuickAddRow category={category} colSpan={colSpan} />
+                    {showHeader && !isCollapsed && (
+                      <QuickAddRow
+                        key={`${key}-${quickAdd === key ? 'open' : 'idle'}`}
+                        category={category ?? tabCategory}
+                        stage={stage ?? undefined}
+                        colSpan={colSpan}
+                        startOpen={quickAdd === key}
+                        onClosed={() => setQuickAdd(null)}
+                      />
                     )}
                   </Fragment>
                 );

@@ -112,12 +112,23 @@ function EmptyMark() {
 
 interface DateCellProps {
   project: EditableItem;
+  /** Shown instead of the (blank) "Empty" mark when there is no date. */
+  emptyContent?: ReactNode;
+  /** Extra class on the displayed date (e.g. red when overdue). */
+  valueClassName?: string;
   column: string;
   field: 'plan_date' | 'adjusted_plan_date' | 'actual_date' | 'projected_start_date';
   onSave: (value: string | null) => void;
 }
 
-export function DateCell({ project, column, field, onSave }: DateCellProps) {
+export function DateCell({
+  project,
+  column,
+  field,
+  onSave,
+  emptyContent,
+  valueClassName,
+}: DateCellProps) {
   const { data: meta } = useMeta();
   const value = project[field] ?? '';
   return (
@@ -126,7 +137,13 @@ export function DateCell({ project, column, field, onSave }: DateCellProps) {
       initial={value}
       changed={(draft) => draft !== value}
       onSave={(draft) => onSave(draft === '' ? null : draft)}
-      display={value ? <span className="num">{formatDate(value)}</span> : <EmptyMark />}
+      display={
+        value ? (
+          <span className={`num ${valueClassName ?? ''}`}>{formatDate(value)}</span>
+        ) : (
+          (emptyContent ?? <EmptyMark />)
+        )
+      }
       render={(draft, setDraft) => (
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{column}</span>
@@ -186,10 +203,13 @@ export function PicCell({
   project,
   persons,
   onSave,
+  emptyContent,
 }: {
   project: EditableItem;
   persons: Person[];
   onSave: (ids: string[]) => void;
+  /** Shown instead of the (blank) "Empty" mark when no one is assigned. */
+  emptyContent?: ReactNode;
 }) {
   const current = project.pics.map((p) => p.id);
   const options = persons
@@ -203,7 +223,13 @@ export function PicCell({
       initial={current}
       changed={(draft) => !same(draft, current)}
       onSave={onSave}
-      display={project.pics.length ? <AvatarGroup people={project.pics} /> : <EmptyMark />}
+      display={
+        project.pics.length ? (
+          <AvatarGroup people={project.pics} />
+        ) : (
+          (emptyContent ?? <EmptyMark />)
+        )
+      }
       render={(draft, setDraft) => (
         <div className={styles.field}>
           <CheckList legend="PIC" options={options} selected={draft} onChange={setDraft} />

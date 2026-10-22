@@ -9,18 +9,33 @@ interface Props {
   order: ColumnId[];
   settings: ColumnSettings;
   onChange: (visibility: Record<ColumnId, boolean>) => void;
+  onNumberChange: (show: boolean) => void;
   onReset: () => void;
+  className?: string;
 }
 
-export function ColumnChooser({ order, settings, onChange, onReset }: Props) {
+const NUMBER = '#';
+
+export function ColumnChooser({
+  order,
+  settings,
+  onChange,
+  onNumberChange,
+  onReset,
+  className,
+}: Props) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
-  const selected = order.filter((id) => settings.visibility[id]);
+  const selected: string[] = [
+    ...(settings.showNumber ? [NUMBER] : []),
+    ...order.filter((id) => settings.visibility[id]),
+  ];
   return (
     <>
       <Button
         ref={setAnchor}
+        className={className}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -30,10 +45,17 @@ export function ColumnChooser({ order, settings, onChange, onReset }: Props) {
       <Popover anchor={anchor} open={open} onClose={close} label="Choose columns" align="end">
         <CheckList
           legend="Show columns"
-          options={order.map((id) => ({ value: id, label: COLUMN_LABELS[id] }))}
+          options={[
+            { value: NUMBER, label: '# (number in category)' },
+            ...order.map((id) => ({ value: id, label: COLUMN_LABELS[id] })),
+          ]}
           selected={selected}
           onChange={(next) => {
-            if (next.length === 0) return; // at least one column stays visible
+            if (next.includes(NUMBER) !== settings.showNumber) {
+              onNumberChange(next.includes(NUMBER));
+              return;
+            }
+            if (!order.some((id) => next.includes(id))) return; // one column stays visible
             const visibility = { ...settings.visibility };
             for (const id of order) visibility[id] = next.includes(id);
             onChange(visibility);

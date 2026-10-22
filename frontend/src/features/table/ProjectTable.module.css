@@ -5,16 +5,15 @@
   flex: 1 1 auto;
 }
 
-/* Horizontal scroll lives here, never on the page. */
+/* Horizontal scroll lives here, never on the page. ClickUp-style: the list sits on the page
+   background, no card around it. */
 .scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--bg);
   overscroll-behavior: contain;
-  --group-h: 28px;
+  --group-h: 24px;
 }
 
 .table {
@@ -38,9 +37,11 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  height: var(--row-h);
-  background: var(--surface-alt);
-  font-weight: 600;
+  height: 32px;
+  background: var(--bg);
+  color: var(--text-muted-aa);
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   padding-right: var(--s2);
 }
@@ -49,8 +50,8 @@
   height: var(--group-h);
   padding: 0 var(--s2);
   text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted-aa);
   border-left: 1px solid var(--border);
@@ -77,18 +78,14 @@
   cursor: help;
 }
 
-/* ---- body ---- */
+/* ---- body: rows on the page background, a thin line between them, lighter on hover ---- */
 .table tbody td {
   height: var(--row-h);
-  background: var(--surface);
-}
-
-.row:nth-child(even) td {
-  background: var(--surface-alt);
+  background: var(--bg);
 }
 
 .row:hover td {
-  background: var(--row-hover);
+  background: var(--surface);
 }
 
 .overdue td {
@@ -165,6 +162,30 @@
   color: var(--adjusted-date);
 }
 
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+/* Description under the name, lined up with the name (after the caret and status circle) */
+.namePreview {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s1);
+  min-width: 0;
+  padding-left: calc(20px + 18px + 2 * 6px);
+  color: var(--text-muted-aa);
+  font-size: 12px;
+}
+
+.namePreview > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .nameWrap {
   display: flex;
   align-items: center;
@@ -222,7 +243,8 @@
   padding: 0;
   border: 0;
   background: none;
-  font-weight: 600;
+  color: var(--text-muted-aa);
+  font-weight: 500;
   text-align: left;
   white-space: nowrap;
 }
@@ -305,15 +327,71 @@ button.resizer {
 }
 
 /* ---- groups ---- */
-/* Sticky under the column header while its group scrolls */
+/* Sticky under the column header while its group scrolls; space above each group, as in
+   ClickUp. */
 .groupRow td {
   position: sticky;
-  top: calc(var(--group-h) + var(--row-h));
+  top: calc(var(--group-h) + 32px);
   z-index: 2;
-  height: var(--row-h);
-  padding: 0 var(--s2);
+  height: auto;
+  padding: var(--s4) var(--s1) var(--s1);
   background: var(--bg) !important;
   border-bottom: 1px solid var(--border);
+}
+
+.groupBar {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+/* Uppercase pill, like ClickUp's status groups */
+.groupPill {
+  display: inline-flex;
+  align-items: center;
+}
+
+.groupPill > span {
+  height: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stagePill {
+  gap: 6px;
+  height: 22px;
+  padding: 0 var(--s2) 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-alt);
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stagePill > span {
+  height: auto;
+}
+
+.groupAdd {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted-aa);
+}
+
+.groupAdd:hover {
+  background: var(--surface-alt);
+  color: var(--text);
 }
 
 .groupOver td {
@@ -324,7 +402,7 @@ button.resizer {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  min-height: var(--control-h);
+  min-height: 28px;
   padding: 0 var(--s1);
   border: 0;
   background: none;
@@ -374,7 +452,7 @@ button.resizer {
 }
 
 .sticky [data-col='name'] {
-  left: 96px;
+  left: var(--name-left, 96px);
   border-right: 1px solid var(--border);
 }
 
@@ -411,9 +489,14 @@ td[data-col*='deadline'] .num {
 }
 
 @media (pointer: coarse) {
+  .namePreview {
+    padding-left: calc(var(--control-h) + 18px + 2 * 6px);
+  }
+
   .filterButton,
   .sortButton,
   .nameButton,
+  .groupAdd,
   .groupToggle {
     min-width: var(--control-h);
     min-height: var(--control-h);
@@ -442,8 +525,8 @@ td[data-col*='deadline'] .num {
 /* ---- quick add at the bottom of each group ---- */
 .addRow td {
   height: var(--row-h);
-  padding: 0 var(--s3);
-  background: var(--surface);
+  padding: 0 var(--s3) 0 52px;
+  background: var(--bg);
 }
 
 .addButton {

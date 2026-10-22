@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useMeta, usePersons, useStages } from '../../api/hooks';
@@ -21,6 +21,7 @@ import type { TaskFormValues } from '../../lib/schema';
 import { DONE_STAGE } from '../../lib/status';
 import { ancestorIds } from '../../lib/tasks';
 import { ActivityList } from '../detail/ActivityList';
+import { DetailFooter, DetailLayout } from '../detail/DetailLayout';
 import form from '../detail/ProjectForm.module.css';
 import { SubtaskList } from './SubtaskList';
 import { useTaskActions } from './TaskActions';
@@ -35,7 +36,15 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-function TaskForm({ task, path }: { task: Task; path: Task[] }) {
+function TaskForm({
+  task,
+  path,
+  onDirtyChange,
+}: {
+  task: Task;
+  path: Task[];
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const actions = useTaskActions();
   const toast = useToast();
   const { data: meta } = useMeta();
@@ -90,9 +99,13 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
 
   const errorId = (name: string): string => `tf-${name}-error`;
   const hasChanges = Object.keys(dirtyFields).length > 0;
+  useEffect(() => onDirtyChange?.(hasChanges), [hasChanges, onDirtyChange]);
+  // A form that goes away (closed, or another view opened) has nothing left to lose.
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   return (
     <form
+      id="task-form"
       className={form.form}
       onSubmit={(event) => void submit(event)}
       noValidate
@@ -111,7 +124,7 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
           ))}
         </p>
       )}
-      <div className={form.field}>
+      <div className={`${form.field} ${form.titleField}`}>
         <label htmlFor="tf-name">Subtask</label>
         <input
           id="tf-name"
@@ -124,45 +137,20 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
         <FieldError id={errorId('name')} message={errors.name?.message} />
       </div>
 
-      <div className={form.field}>
-        <label htmlFor="tf-stage">Stage</label>
-        <select
-          id="tf-stage"
-          {...register('stage_id', { valueAsNumber: true, onChange: onStageChange })}
-        >
-          {stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <Controller
-        control={control}
-        name="pic_ids"
-        render={({ field }) => (
-          <div className={form.field}>
-            <CheckList
-              legend="PIC"
-              name="task_pic_ids"
-              options={persons
-                .filter((p) => p.is_active || field.value.includes(p.id))
-                .map((p) => ({
-                  value: p.id,
-                  label: p.is_active ? p.name : `${p.name} (inactive)`,
-                }))}
-              selected={field.value}
-              onChange={field.onChange}
-            />
-            <p className={form.hint}>
-              {field.value.length === 0 ? 'No one assigned: PIC is TBD.' : ' '}
-            </p>
-          </div>
-        )}
-      />
-
-      <div className={form.row}>
+      <div className={form.props}>
+        <div className={form.field}>
+          <label htmlFor="tf-stage">Stage</label>
+          <select
+            id="tf-stage"
+            {...register('stage_id', { valueAsNumber: true, onChange: onStageChange })}
+          >
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
         {(
           [
             ['plan_date', 'tf-plan', 'Plan date'],
@@ -189,36 +177,60 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
             )}
           />
         ))}
+        <Controller
+          control={control}
+          name="actual_date"
+          render={({ field }) => (
+            <div className={form.field}>
+              <label htmlFor="tf-actual">Actual date</label>
+              <DateField
+                id="tf-actual"
+                label="Actual date"
+                value={field.value}
+                onChange={field.onChange}
+                max={today}
+                invalid={!!errors.actual_date}
+                describedBy={errors.actual_date ? errorId('actual_date') : undefined}
+              />
+              <FieldError id={errorId('actual_date')} message={errors.actual_date?.message} />
+              {doneHint && actual === today && !errors.actual_date && (
+                <p className={form.hint} role="status">
+                  Stage is Done, so the actual date defaults to today.
+                </p>
+              )}
+            </div>
+          )}
+        />
+        <Controller
+          control={control}
+          name="pic_ids"
+          render={({ field }) => (
+            <div className={`${form.field} ${form.fullRow}`}>
+              <CheckList
+                legend="PIC"
+                name="task_pic_ids"
+                inline
+                options={persons
+                  .filter((p) => p.is_active || field.value.includes(p.id))
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.is_active ? p.name : `${p.name} (inactive)`,
+                  }))}
+                selected={field.value}
+                onChange={field.onChange}
+              />
+              <p className={form.hint}>
+                {field.value.length === 0 ? 'No one assigned: PIC is TBD.' : ' '}
+              </p>
+            </div>
+          )}
+        />
       </div>
       {warning && (
         <p className={form.warning} role="status">
           {warning}
         </p>
       )}
-      <Controller
-        control={control}
-        name="actual_date"
-        render={({ field }) => (
-          <div className={form.field}>
-            <label htmlFor="tf-actual">Actual date</label>
-            <DateField
-              id="tf-actual"
-              label="Actual date"
-              value={field.value}
-              onChange={field.onChange}
-              max={today}
-              invalid={!!errors.actual_date}
-              describedBy={errors.actual_date ? errorId('actual_date') : undefined}
-            />
-            <FieldError id={errorId('actual_date')} message={errors.actual_date?.message} />
-            {doneHint && actual === today && !errors.actual_date && (
-              <p className={form.hint} role="status">
-                Stage is Done, so the actual date defaults to today.
-              </p>
-            )}
-          </div>
-        )}
-      />
 
       <Controller
         control={control}
@@ -234,7 +246,7 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
-              minRows={5}
+              minRows={12}
               placeholder="Details, checklists, links... (Markdown)"
               invalid={!!errors.notes}
               describedBy={errors.notes ? errorId('notes') : undefined}
@@ -244,15 +256,21 @@ function TaskForm({ task, path }: { task: Task; path: Task[] }) {
         )}
       />
 
-      <div className={form.footer}>
-        <Button variant="ghost" className={form.delete} onClick={() => actions.remove(task, false)}>
-          Delete
-        </Button>
-        <span className={form.spacer} />
-        <Button type="submit" variant="primary" disabled={!hasChanges}>
-          Save changes
-        </Button>
-      </div>
+      <DetailFooter>
+        <div className={form.footer}>
+          <Button
+            variant="ghost"
+            className={form.delete}
+            onClick={() => actions.remove(task, false)}
+          >
+            Delete
+          </Button>
+          <span className={form.spacer} />
+          <Button type="submit" form="task-form" variant="primary" disabled={!hasChanges}>
+            Save changes
+          </Button>
+        </div>
+      </DetailFooter>
     </form>
   );
 }
@@ -262,10 +280,15 @@ export function TaskDetail({
   projectId,
   projectName,
   taskId,
+  showActivity,
+  onDirtyChange,
 }: {
   projectId: string;
   projectName: string;
   taskId: string;
+  /** The history column is shown only when asked for (Activity in the header). */
+  showActivity: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const actions = useTaskActions();
   const query = useTasks(projectId);
@@ -279,34 +302,40 @@ export function TaskDetail({
     : [];
 
   return (
-    <div className={styles.wrap} data-testid="task-detail">
-      <button type="button" className={styles.back} onClick={actions.back}>
-        <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
-        Back to {projectName}
-      </button>
-      {query.isPending && <p aria-live="polite">Loading...</p>}
-      {query.isError && (
-        <div role="alert">
-          <p>Could not load this subtask.</p>
-          <Button onClick={() => void query.refetch()}>Retry</Button>
+    <DetailLayout
+      main={
+        <div className={styles.wrap} data-testid="task-detail">
+          <button type="button" className={styles.back} onClick={actions.back}>
+            <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+            Back to {projectName}
+          </button>
+          {query.isPending && <p aria-live="polite">Loading...</p>}
+          {query.isError && (
+            <div role="alert">
+              <p>Could not load this subtask.</p>
+              <Button onClick={() => void query.refetch()}>Retry</Button>
+            </div>
+          )}
+          {query.isSuccess && !task && (
+            <div>
+              <p>This subtask no longer exists.</p>
+              <Button onClick={actions.back}>Back to the project</Button>
+            </div>
+          )}
+          {task && (
+            <>
+              <TaskForm key={task.id} task={task} path={path} onDirtyChange={onDirtyChange} />
+              <SubtaskList
+                projectId={projectId}
+                parent={{ id: task.id, name: task.name, depth: task.depth }}
+              />
+            </>
+          )}
         </div>
-      )}
-      {query.isSuccess && !task && (
-        <div>
-          <p>This subtask no longer exists.</p>
-          <Button onClick={actions.back}>Back to the project</Button>
-        </div>
-      )}
-      {task && (
-        <>
-          <TaskForm key={task.id} task={task} path={path} />
-          <SubtaskList
-            projectId={projectId}
-            parent={{ id: task.id, name: task.name, depth: task.depth }}
-          />
-          <ActivityList projectId={projectId} taskId={task.id} />
-        </>
-      )}
-    </div>
+      }
+      side={
+        task && showActivity ? <ActivityList projectId={projectId} taskId={task.id} /> : undefined
+      }
+    />
   );
 }

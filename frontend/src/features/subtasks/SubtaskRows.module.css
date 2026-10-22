@@ -19,7 +19,7 @@
   height: 32px;
   padding-top: 0;
   padding-bottom: 0;
-  background: var(--surface);
+  background: var(--bg);
 }
 
 .loading {

@@ -1,11 +1,42 @@
 /* Shared by the subtask rows in the table and the subtask list in the panel / sheet. */
 .check {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
   flex: none;
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: var(--accent);
+  border: 1.5px dashed var(--text-muted-aa);
+  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
+}
+
+.check:hover {
+  border-style: solid;
+  border-color: var(--st-done-fg);
+}
+
+.check:checked {
+  border: 0;
+  background: var(--st-done-fg);
+}
+
+/* the tick inside a done circle */
+.check:checked::after {
+  content: '';
+  width: 4px;
+  height: 7px;
+  margin-top: -2px;
+  border: solid var(--bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.check:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .fold {
@@ -35,19 +66,22 @@
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 3px;
   flex: none;
   height: 20px;
-  padding: 0 6px;
-  border-radius: 4px;
-  border: 1px solid var(--border-strong);
   color: var(--text-muted-aa);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12px;
 }
 
 .badgeDone {
   color: var(--st-done-fg);
-  border-color: var(--st-done-fg);
+}
+
+.notesMark {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--text-muted-aa);
 }
 
 .addButton {
@@ -96,7 +130,75 @@
   box-shadow: 0 0 0 2px var(--match-bg);
 }
 
+/* ClickUp-style add row */
+.addRowForm {
+  flex-wrap: nowrap;
+  gap: var(--s2);
+  min-height: 36px;
+  padding: var(--s1) 0;
+}
+
+.addRowForm .addInput {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.addRowForm .addInput:focus {
+  border-color: var(--focus-ring);
+  background: var(--surface);
+}
+
+.addCircle {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px dashed var(--text-muted-aa);
+  border-radius: 50%;
+}
+
+.addActions {
+  display: inline-flex;
+  flex: none;
+  gap: var(--s1);
+}
+
+.addCancel,
+.addSave {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 var(--s2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.addCancel {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.addSave {
+  border: 1px solid var(--primary-bg);
+  background: var(--primary-bg);
+  color: var(--on-primary);
+}
+
+.addSave:disabled {
+  opacity: 0.6;
+}
+
 @media (pointer: coarse) {
+  .addCancel,
+  .addSave {
+    min-height: var(--control-h);
+  }
+
   .fold,
   .foldSpacer {
     width: var(--control-h);

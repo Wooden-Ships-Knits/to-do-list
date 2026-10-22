@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
 import { MarkdownEditor } from '../../components/markdown/MarkdownEditor';
+import { DetailFooter } from './DetailLayout';
 import { CATEGORY_LABELS, DONE_STAGE } from '../../lib/status';
 import {
   adjustedBeforePlanWarning,
@@ -35,6 +36,8 @@ interface Props {
   onSaved: (project: Project) => void;
   onCancel: () => void;
   onDelete?: () => void;
+  /** Told whenever the form gets / loses unsaved changes (to ask before closing). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -68,6 +71,7 @@ export function ProjectForm({
   onSaved,
   onCancel,
   onDelete,
+  onDirtyChange,
 }: Props) {
   const { data: meta } = useMeta();
   const { data: stages = [] } = useStages();
@@ -169,6 +173,9 @@ export function ProjectForm({
   });
 
   const hasChanges = Object.keys(dirtyFields).length > 0;
+  useEffect(() => onDirtyChange?.(hasChanges), [hasChanges, onDirtyChange]);
+  // A form that goes away (closed, or another view opened) has nothing left to lose.
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
   const busy = isSubmitting || createMutation.isPending || patchMutation.isPending;
   const errorId = (name: string): string => `${name}-error`;
   const invalid = (name: keyof ProjectFormValues): boolean | undefined =>
@@ -200,7 +207,7 @@ export function ProjectForm({
         </p>
       )}
 
-      <div className={styles.field}>
+      <div className={`${styles.field} ${styles.titleField}`}>
         <label htmlFor="pf-name">Project</label>
         <input
           id="pf-name"
@@ -213,7 +220,7 @@ export function ProjectForm({
         <FieldError id={errorId('name')} message={errors.name?.message} />
       </div>
 
-      <div className={styles.row}>
+      <div className={styles.props}>
         <div className={styles.field}>
           <label htmlFor="pf-category">Category</label>
           <select id="pf-category" aria-invalid={invalid('category')} {...register('category')}>
@@ -241,65 +248,6 @@ export function ProjectForm({
           </select>
           <FieldError id={errorId('stage_id')} message={errors.stage_id?.message} />
         </div>
-      </div>
-
-      <Controller
-        control={control}
-        name="pic_ids"
-        render={({ field }) => (
-          <div className={styles.field}>
-            <CheckList
-              legend="PIC"
-              name="pic_ids"
-              options={persons
-                .filter((p) => p.is_active || field.value.includes(p.id))
-                .map((p) => ({
-                  value: p.id,
-                  label: p.is_active ? p.name : `${p.name} (inactive)`,
-                }))}
-              selected={field.value}
-              onChange={field.onChange}
-            />
-            <p className={styles.hint}>
-              {field.value.length === 0 ? 'No one assigned: PIC is TBD.' : ' '}
-            </p>
-          </div>
-        )}
-      />
-
-      {(
-        [
-          ['description', 'pf-description', 'Description', 3],
-          ['status_notes', 'pf-notes', 'Status notes', 4],
-          ['ongoing_issue', 'pf-issue', 'Ongoing issue', 3],
-        ] as const
-      ).map(([name, id, label, rows]) => (
-        <Controller
-          key={name}
-          control={control}
-          name={name}
-          render={({ field }) => (
-            <div className={styles.field}>
-              <span id={`${id}-label`} className={styles.label}>
-                {label}
-              </span>
-              <MarkdownEditor
-                id={id}
-                labelId={`${id}-label`}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                minRows={rows}
-                invalid={!!errors[name]}
-                describedBy={errors[name] ? errorId(name) : undefined}
-              />
-              <FieldError id={errorId(name)} message={errors[name]?.message} />
-            </div>
-          )}
-        />
-      ))}
-
-      <div className={styles.row}>
         <Controller
           control={control}
           name="plan_date"
@@ -339,14 +287,6 @@ export function ProjectForm({
             </div>
           )}
         />
-      </div>
-      {warning && (
-        <p className={styles.warning} role="status" data-testid="date-warning">
-          {warning}
-        </p>
-      )}
-
-      <div className={styles.row}>
         <Controller
           control={control}
           name="actual_date"
@@ -395,32 +335,99 @@ export function ProjectForm({
             </div>
           )}
         />
-      </div>
-
-      <div className={styles.field}>
-        <label htmlFor="pf-note">Deadline note</label>
-        <input
-          id="pf-note"
-          type="text"
-          autoComplete="off"
-          aria-invalid={invalid('deadline_note')}
-          {...register('deadline_note')}
+        <div className={styles.field}>
+          <label htmlFor="pf-note">Deadline note</label>
+          <input
+            id="pf-note"
+            type="text"
+            autoComplete="off"
+            aria-invalid={invalid('deadline_note')}
+            {...register('deadline_note')}
+          />
+          <FieldError id={errorId('deadline_note')} message={errors.deadline_note?.message} />
+        </div>
+        <Controller
+          control={control}
+          name="pic_ids"
+          render={({ field }) => (
+            <div className={`${styles.field} ${styles.fullRow}`}>
+              <CheckList
+                legend="PIC"
+                name="pic_ids"
+                inline
+                options={persons
+                  .filter((p) => p.is_active || field.value.includes(p.id))
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.is_active ? p.name : `${p.name} (inactive)`,
+                  }))}
+                selected={field.value}
+                onChange={field.onChange}
+              />
+              <p className={styles.hint}>
+                {field.value.length === 0 ? 'No one assigned: PIC is TBD.' : ' '}
+              </p>
+            </div>
+          )}
         />
-        <FieldError id={errorId('deadline_note')} message={errors.deadline_note?.message} />
       </div>
+      {warning && (
+        <p className={styles.warning} role="status" data-testid="date-warning">
+          {warning}
+        </p>
+      )}
 
-      <div className={styles.footer}>
-        {onDelete && (
-          <Button variant="ghost" className={styles.delete} onClick={onDelete}>
-            Delete
+      {(
+        [
+          ['description', 'pf-description', 'Description', 6],
+          ['status_notes', 'pf-notes', 'Status notes', 8],
+          ['ongoing_issue', 'pf-issue', 'Ongoing issue', 4],
+        ] as const
+      ).map(([name, id, label, rows]) => (
+        <Controller
+          key={name}
+          control={control}
+          name={name}
+          render={({ field }) => (
+            <div className={styles.field}>
+              <span id={`${id}-label`} className={styles.label}>
+                {label}
+              </span>
+              <MarkdownEditor
+                id={id}
+                labelId={`${id}-label`}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                minRows={rows}
+                invalid={!!errors[name]}
+                describedBy={errors[name] ? errorId(name) : undefined}
+              />
+              <FieldError id={errorId(name)} message={errors[name]?.message} />
+            </div>
+          )}
+        />
+      ))}
+
+      <DetailFooter>
+        <div className={styles.footer}>
+          {onDelete && (
+            <Button variant="ghost" className={styles.delete} onClick={onDelete}>
+              Delete
+            </Button>
+          )}
+          <span className={styles.spacer} />
+          {mode === 'create' && <Button onClick={onCancel}>Cancel</Button>}
+          <Button
+            type="submit"
+            form="project-form"
+            variant="primary"
+            disabled={busy || (mode === 'edit' && !hasChanges)}
+          >
+            {mode === 'create' ? 'Create project' : busy ? 'Saving...' : 'Save changes'}
           </Button>
-        )}
-        <span className={styles.spacer} />
-        {mode === 'create' && <Button onClick={onCancel}>Cancel</Button>}
-        <Button type="submit" variant="primary" disabled={busy || (mode === 'edit' && !hasChanges)}>
-          {mode === 'create' ? 'Create project' : busy ? 'Saving...' : 'Save changes'}
-        </Button>
-      </div>
+        </div>
+      </DetailFooter>
     </form>
   );
 }
