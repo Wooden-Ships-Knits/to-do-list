@@ -15,6 +15,7 @@ const ImportPage = lazy(() =>
   import('./pages/ImportPage').then((m) => ({ default: m.ImportPage })),
 );
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
+const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default: m.NotesPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,17 @@ function AppRoutes() {
                 </Lazy>
               }
             />
+            {['/notes', '/notes/:noteId'].map((path) => (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <Lazy>
+                    <NotesPage />
+                  </Lazy>
+                }
+              />
+            ))}
             <Route path="*" element={<DashboardPage />} />
           </Routes>
         </TaskActionsProvider>

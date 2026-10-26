@@ -46,6 +46,8 @@ def _duplicate(title: str) -> AppError:
 
 def snippet(body: str) -> str:
     """The start of the body as plain text, for lists."""
+    # table divider rows ("| --- | :-: |") are layout, not text
+    body = re.sub(r"^[ \t]*\|?[ \t:|-]*-{3,}[ \t:|-]*$", "", body, flags=re.M)
     text = re.sub(r"\[\[([^\]|]+)\|([^\]]*)\]\]", r"\2", body)
     text = re.sub(r"\[\[([^\]]+)\]\]", r"\1", text)
     text = re.sub(r"[#>*_`~]|^\s*[-+]\s+(\[[ xX]\]\s+)?|\|", " ", text, flags=re.M)

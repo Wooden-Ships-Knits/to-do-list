@@ -276,3 +276,6 @@ def test_snippet_reads_like_plain_text() -> None:
         "Title task with label and Other quote"
     )
     assert len(snippet("word " * 100)) == 140
+    assert snippet("| Rule | Value |\n| --- | :-: |\n| Overtime | 1.5x |\n---\nafter") == (
+        "Rule Value Overtime 1.5x after"
+    )

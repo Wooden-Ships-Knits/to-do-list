@@ -3,6 +3,10 @@ import type {
   AdminUser,
   CurrentUser,
   ImportReport,
+  LinkTarget,
+  Note,
+  NotePatch,
+  NoteSummary,
   Meta,
   Page,
   Person,
@@ -189,6 +193,15 @@ export const api = {
   patchUser: (id: string, patch: { is_admin?: boolean; is_active?: boolean }) =>
     request<AdminUser>(`/users/${id}`, json('PATCH', patch)),
   resetPassword: (id: string) => request<void>(`/users/${id}/reset-password`, { method: 'POST' }),
+  notes: (q: string) => request<NoteSummary[]>(`/notes${toSearch(q ? [['q', q]] : [])}`),
+  note: (id: string) => request<Note>(`/notes/${id}`),
+  createNote: (title: string, body = '') => request<Note>('/notes', json('POST', { title, body })),
+  patchNote: (id: string, version: number, patch: NotePatch) =>
+    request<Note>(`/notes/${id}`, json('PATCH', { version, ...patch })),
+  deleteNote: (id: string) => request<void>(`/notes/${id}`, { method: 'DELETE' }),
+  restoreNote: (id: string) => request<Note>(`/notes/${id}/restore`, { method: 'POST' }),
+  linkTargets: (q: string) =>
+    request<LinkTarget[]>(`/notes/link-targets${toSearch(q ? [['q', q]] : [])}`),
   meta: () => request<Meta>('/meta'),
   stages: () => request<Stage[]>('/stages'),
   persons: () => request<Person[]>('/persons'),

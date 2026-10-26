@@ -265,3 +265,56 @@ export interface ReorderBody {
   after_id?: string;
   version: number;
 }
+
+/* ---------- private notes ---------- */
+
+export type NoteLinkKind = 'note' | 'project' | 'task' | 'unresolved';
+
+export interface NoteLink {
+  target: string;
+  label: string | null;
+  kind: NoteLinkKind;
+  note_id: string | null;
+  project_id: string | null;
+  task_id: string | null;
+}
+
+export interface NoteSummary {
+  id: string;
+  title: string;
+  pinned: boolean;
+  updated_at: string;
+  snippet: string;
+}
+
+export interface Backlink {
+  id: string;
+  title: string;
+  snippet: string;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  links: NoteLink[];
+  backlinks: Backlink[];
+}
+
+export interface NotePatch {
+  title?: string;
+  body?: string;
+  pinned?: boolean;
+}
+
+export interface LinkTarget {
+  kind: 'note' | 'project' | 'task';
+  label: string;
+  insert: string;
+  id: string;
+}
