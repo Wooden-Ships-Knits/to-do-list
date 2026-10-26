@@ -25,3 +25,8 @@ if (typeof Range !== 'undefined' && !Range.prototype.getClientRects) {
   Range.prototype.getClientRects = () =>
     Object.assign([], { item: () => null }) as unknown as DOMRectList;
 }
+
+// jsdom does not scroll: popovers call scrollIntoView to keep the focused item visible.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined;
+}

@@ -26,6 +26,7 @@ SIMPLE_FIELDS = (
     "actual_date",
     "projected_start_date",
     "deadline_note",
+    "priority",
 )
 
 
@@ -129,6 +130,14 @@ def _fmt(value: object) -> str | None:
     return value.isoformat() if isinstance(value, date) else str(value)
 
 
+def actor_id(session: Session) -> uuid.UUID:
+    """The logged-in user making this request's changes (set by app.auth)."""
+    actor: uuid.UUID | None = session.info.get("actor_id")
+    if actor is None:
+        raise RuntimeError("change without a logged-in user")
+    return actor
+
+
 def log_change(
     session: Session,
     project_id: uuid.UUID,
@@ -141,6 +150,7 @@ def log_change(
         ActivityLog(
             project_id=project_id,
             task_id=task_id,
+            actor_id=actor_id(session),
             field=field,
             old_value=_fmt(old),
             new_value=_fmt(new),
@@ -261,6 +271,8 @@ def insert_project(
         actual_date=actual,
         projected_start_date=payload.projected_start_date,
         deadline_note=payload.deadline_note,
+        priority=payload.priority,
+        created_by_id=actor_id(session),
         position=next_position(session, payload.category),
     )
     project.version = 1

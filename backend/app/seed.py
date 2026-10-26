@@ -1,14 +1,16 @@
 """Idempotent seed: running it twice never duplicates data."""
 
 import logging
+import sys
 from dataclasses import dataclass, field
 from datetime import date
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.auth import hash_password
 from app.db import session_factory
-from app.models import ActivityLog, Category, Person, Project, Stage
+from app.models import ActivityLog, Category, Person, Project, Stage, User
 from app.services.projects import next_position
 
 log = logging.getLogger("app.seed")
@@ -26,6 +28,9 @@ STAGES = [
     "Done",
 ]
 PEOPLE = ["Denan", "Luthfi", "Prada", "Dzawil", "Andika"]
+# Every team member gets an admin login "<name in lower case>" whose first password is the
+# username; it has to be changed at the first login.
+ACCOUNTS = PEOPLE
 
 
 @dataclass
@@ -182,17 +187,33 @@ def seed_stages(session: Session) -> dict[str, Stage]:
     return existing
 
 
-def seed(session: Session) -> dict[str, int]:
-    stages = seed_stages(session)
+def seed_people(session: Session) -> tuple[dict[str, Person], int]:
+    """The team members (by lower-case name), creating the missing ones."""
     people = {p.name.lower(): p for p in session.scalars(sa.select(Person))}
-    created_people = 0
+    created = 0
     for name in PEOPLE:
         if name.lower() not in people:
             person = Person(name=name)
             session.add(person)
             people[name.lower()] = person
-            created_people += 1
+            created += 1
     session.flush()
+    return people, created
+
+
+def seed_accounts(session: Session) -> dict[str, int]:
+    """Only the login accounts (and their people if missing). Never touches projects, so it is
+    safe on a database with real data: `python -m app.seed users`."""
+    people, created_people = seed_people(session)
+    created_users = seed_users(session, people)
+    session.commit()
+    return {"people": created_people, "users": created_users}
+
+
+def seed(session: Session) -> dict[str, int]:
+    stages = seed_stages(session)
+    people, created_people = seed_people(session)
+    created_users = seed_users(session, people)
 
     existing_names = {
         n.lower()
@@ -221,14 +242,55 @@ def seed(session: Session) -> dict[str, int]:
         session.add(ActivityLog(project_id=project.id, field="project", new_value="created"))
         created_projects += 1
     session.commit()
-    return {"people": created_people, "projects": created_projects}
+    return {"people": created_people, "users": created_users, "projects": created_projects}
 
 
-def main() -> None:
+def seed_users(session: Session, people: dict[str, Person]) -> int:
+    """Creates the missing accounts only: an existing account (and its password) is never
+    touched, so running the seed again is safe."""
+    taken = {u.lower() for u in session.scalars(sa.select(User.username))}
+    linked = set(session.scalars(sa.select(User.person_id)))
+    created = 0
+    for name in ACCOUNTS:
+        username = name.lower()
+        person = people[username]
+        if username in taken or person.id in linked:
+            continue
+        session.add(
+            User(
+                username=username,
+                person_id=person.id,
+                password_hash=hash_password(username),
+                is_admin=True,
+                is_active=True,
+                must_change_password=True,
+            )
+        )
+        created += 1
+    session.flush()
+    return created
+
+
+def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    args = sys.argv[1:] if argv is None else argv
+    if args == ["users"]:
+        with session_factory()() as session:
+            accounts = seed_accounts(session)
+        log.info(
+            "Accounts: %s new people, %s new users (projects untouched)",
+            accounts["people"],
+            accounts["users"],
+        )
+        return
     with session_factory()() as session:
         result = seed(session)
-    log.info("Seed complete: %s new people, %s new projects", result["people"], result["projects"])
+    log.info(
+        "Seed complete: %s new people, %s new users, %s new projects",
+        result["people"],
+        result["users"],
+        result["projects"],
+    )
 
 
 if __name__ == "__main__":

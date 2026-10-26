@@ -153,7 +153,8 @@ test.describe('theme toggle', () => {
     expect(before.rootChildren).toBe(0); // React has not rendered yet
     expect(before.theme).toBe('light');
     expect(before.bg).toBe(BG.light);
-    await page.unroute('**/assets/*.js');
+    // let the held-back scripts finish their own (delayed) continue before removing the route
+    await page.unrouteAll({ behavior: 'wait' });
     await app.ready();
     const seen = await page.evaluate(() => (window as unknown as { __themes: string[] }).__themes);
     expect(seen.filter((v) => v !== 'light')).toEqual([]); // never "dark" at any point

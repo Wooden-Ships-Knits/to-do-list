@@ -9,6 +9,9 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { insertLink, toggleLinePrefix, toggleTask, toggleWrap } from './commands';
 import { livePreview, openLinkOnModClick } from './livePreview';
+import { tablePreview } from './tablePreview';
+import { wikilinks as wikilinkExtension, wikilinksChanged } from './wikilinks';
+import type { WikilinkConfig } from './wikilinks';
 import type { MarkdownEditorProps } from '../MarkdownEditor';
 import styles from '../MarkdownEditor.module.css';
 
@@ -52,8 +55,12 @@ export default function MarkdownEditorImpl({
   invalid,
   describedBy,
   minRows = 3,
+  wikilinks,
 }: MarkdownEditorProps) {
   const host = useRef<HTMLDivElement>(null);
+  // [[links]]: the editor reads the latest config through this ref.
+  const linkConfig = useRef<WikilinkConfig | undefined>(wikilinks);
+  const hasLinks = useRef(wikilinks !== undefined);
   const view = useRef<EditorView | null>(null);
   // Latest callbacks without re-creating the editor.
   const callbacks = useRef({ onChange, onBlur });
@@ -80,6 +87,8 @@ export default function MarkdownEditorImpl({
           // raw HTML is never rendered anyway).
           new LanguageSupport(markdownLanguage),
           livePreview,
+          tablePreview,
+          hasLinks.current ? wikilinkExtension(linkConfig as { current: WikilinkConfig }) : [],
           openLinkOnModClick,
           EditorView.lineWrapping,
           placeholder ? placeholderExt(placeholder) : [],
@@ -111,6 +120,12 @@ export default function MarkdownEditorImpl({
     // The editor is created once; value changes are synced below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, labelId, placeholder]);
+
+  // New link resolutions (after a save) or callbacks: redraw the [[links]].
+  useEffect(() => {
+    linkConfig.current = wikilinks;
+    view.current?.dispatch({ effects: wikilinksChanged.of(null) });
+  }, [wikilinks]);
 
   // Keep the document in sync when the value changes from outside (reset, refetch).
   useEffect(() => {

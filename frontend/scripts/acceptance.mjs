@@ -254,10 +254,10 @@ const features = [
   ],
   [
     '5 Table',
-    'Side panel / drawer / sheet: all fields editable + activity history',
+    'Detail pop-up / sheet: all fields editable + activity history (from the Activity button)',
     [
       E(/all fields are editable in the detail view/),
-      E(/side panel is a drawer|every visible column has a filter and the side panel/),
+      E(/the detail pop-up fills the screen|the pop-up is centred/),
     ],
   ],
   [
@@ -341,17 +341,17 @@ const features = [
   ['5 Mobile', 'Safe-area insets', [E(/safe-area insets/)]],
   [
     '5 Tablet',
-    'Priority columns by default; sticky Project column; scroll inside the table container only',
-    [E(/tablet specifics > priority columns/)],
+    'ClickUp-style columns by default; sticky Project column; scroll inside the table container only',
+    [E(/tablet specifics > ClickUp-style columns/)],
   ],
   [
     '5 Tablet',
-    'Drawer at 80% width; filters in a side drawer; column chooser',
-    [E(/tablet specifics > side panel is a drawer/), E(/shows a live result count/)],
+    'Detail pop-up fills the screen with a 16px margin; filters in a side drawer; column chooser',
+    [E(/tablet specifics > the detail pop-up fills/), E(/shows a live result count/)],
   ],
   [
     '5 Desktop',
-    'Column-header filters; side panel docked right; dense rows',
+    'Every column has a filter in the Filters panel; centred detail pop-up; dense rows',
     [E(/desktop specifics >/)],
   ],
   [
@@ -543,6 +543,133 @@ const features = [
       E(/show the date format everywhere/),
       V(/contrast.test::palette matches/),
       V(/dates.test::formatDate/),
+    ],
+  ],
+  // ---- logins, attribution, priority (2026-10-26) ----
+  [
+    'Login',
+    'Login required everywhere; back to the same view after logging in; one plain error, no lockout',
+    [
+      E(/login > without a session the app asks to log in/),
+      E(/login > the API refuses every call/),
+      P(
+        /test_auth::test_(login|wrong_credentials|inactive_user|repeated_failures|every_endpoint|health)/,
+      ),
+      V(/LoginPage\.test::LoginPage/),
+      V(/authSchema\.test::redirect after login/),
+    ],
+  ],
+  [
+    'Login',
+    'First login forces a new password (same rules in the browser and the API); logout ends the session',
+    [
+      E(/first login forces a new password/),
+      P(/test_auth::test_(first_login|password_rules|changing_the_password|logout)/),
+      V(/ChangePasswordPage|change password form/),
+    ],
+  ],
+  [
+    'Login',
+    'A session that ends while the app is open leads back to login, keeping the page; CSRF header on writes',
+    [
+      E(/a session that ends while the app is open/),
+      P(
+        /test_auth::test_(writes_without_the_csrf|expired_session|session_expiry_slides|inactive_users_sessions)/,
+      ),
+      V(/client\.test::api client/),
+    ],
+  ],
+  [
+    'Login',
+    'Users screen (admins): add, reset password, make admin, deactivate; nobody can lock themselves out',
+    [
+      E(/users screen \(admins\) > add a user/),
+      E(/people who are not admins have no Users screen/),
+      P(/test_users::/),
+      V(/UsersPage\.test::UsersPage/),
+    ],
+  ],
+  [
+    'Login',
+    'Seed accounts (password = username, must change); make seed-users never touches projects',
+    [P(/test_seed_is_idempotent|test_seed_users_only/)],
+  ],
+  [
+    'Login',
+    'Login, password and Users screens: both themes, axe, no horizontal scroll, screenshots',
+    [
+      E(/login, password and users screens in the light theme/),
+      E(/without a session the app asks/),
+    ],
+  ],
+  [
+    'History',
+    'Every change names who made it ("Unknown" before logins); "Created by" on projects and subtasks',
+    [
+      E(/who changed what > history and "Created by"/),
+      P(/test_attribution::/),
+      V(/ActivityList\.test|describe\.test::priority and who made the change/),
+    ],
+  ],
+  [
+    'Priority',
+    'ClickUp priority (Urgent/High/Normal/Low/none): inline edit, pop-up and sheet, history',
+    [
+      E(/priority > set, change and clear a project priority/),
+      P(/test_priority::test_(new_projects|create_set|same_priority|invalid_priority)/),
+      V(
+        /PriorityFlag\.test|priority\.test|schema\.test::(project priority|subtask form > sends priority)/,
+      ),
+    ],
+  ],
+  [
+    'Priority',
+    'Priority filter (incl. "No priority"), chips and URL; sort with no priority last; Group: Priority',
+    [
+      E(/priority > filter by priority/),
+      E(/priority > sort by priority/),
+      E(/priority > Group: Priority/),
+      P(/test_priority::test_(filter|bad_priority_filter|sort)/),
+      V(/view\.test::priority/),
+    ],
+  ],
+  [
+    'Priority',
+    'Subtask priority; CSV import / export column',
+    [E(/subtasks have a priority too/), P(/test_priority::test_(subtask|export|import)/)],
+  ],
+  [
+    'Priority',
+    'Flag colours in both themes (3:1 as a graphic) and the level always written',
+    [E(/flag colours in the (dark|light) theme/), V(/contrast\.test::.*priority flag/)],
+  ],
+  // ---- subtasks (PR #1 / #2) ----
+  [
+    'Subtasks',
+    'Add (top level and nested), tick done, progress on the project row',
+    [E(/subtasks > add subtasks/), P(/test_tasks::/)],
+  ],
+  [
+    'Subtasks',
+    'Subtask rows in the list: show / hide, edit in place, remembered, "Subtasks" toolbar button',
+    [E(/subtasks > subtask rows in the list/)],
+  ],
+  [
+    'Subtasks',
+    'Subtask view: fields, Markdown notes, priority, history',
+    [
+      E(/subtasks > open a subtask/),
+      V(/MarkdownEditor\.test|livePreview\.test|tablePreview\.test/),
+    ],
+  ],
+  [
+    'Subtasks',
+    'Move up / down, indent / outdent (menu) and keyboard reorder; delete with Undo; search finds subtasks',
+    [
+      E(/subtasks > menu moves/),
+      E(/subtasks > keyboard reorder/),
+      E(/subtasks > delete asks first/),
+      E(/subtasks > search finds a subtask/),
     ],
   ],
 ];

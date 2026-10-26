@@ -46,6 +46,11 @@ async function showColumns(page: Page, labels: string[]): Promise<void> {
   await page.keyboard.press('Escape');
 }
 
+// These tests are about the spreadsheet-like schedule columns: show them all, plus "#".
+test.beforeEach(async ({ app }) => {
+  await app.spreadsheetColumns();
+});
+
 test.describe('column order and the Schedule group', () => {
   test('columns are in the specified order with a "Schedule" header above the four', async ({
     app,
@@ -63,6 +68,7 @@ test.describe('column order and the Schedule group', () => {
         'name',
         'description',
         'stage',
+        'priority',
         'status_notes',
         'projected_start_date',
         'plan_date',
@@ -72,12 +78,13 @@ test.describe('column order and the Schedule group', () => {
         'deadline_status',
       ]);
     } else {
-      // tablet: #, Project, Stage, the four schedule columns and Deadline Status
+      // tablet: #, Project, Stage, Priority, the four schedule columns and Deadline Status
       expect(await headerOrder(page)).toEqual([
         'fixed:handle',
         'fixed:number',
         'name',
         'stage',
+        'priority',
         'plan_date',
         'adjusted_plan_date',
         'actual_date',
@@ -93,6 +100,7 @@ test.describe('column order and the Schedule group', () => {
         'category',
         'description',
         'stage',
+        'priority',
         'status_notes',
         'projected_start_date',
         'plan_date',

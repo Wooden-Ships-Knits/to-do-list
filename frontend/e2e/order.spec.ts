@@ -379,6 +379,7 @@ test.describe('drag and drop', () => {
     ]);
     // the activity log says where it came from
     const detail = await app.openProject(p1!.name);
+    await page.getByTestId('toggle-activity').click();
     await expect(detail.getByTestId('activity-list')).toContainText(
       `Moved from Pending #${base.pending + 1} to Current #${base.current + 2}`,
     );

@@ -1,6 +1,15 @@
-import { Download, ListChecks, PanelLeftClose, PanelLeftOpen, Upload, Users } from 'lucide-react';
+import {
+  Download,
+  ListChecks,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Upload,
+  Users,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSummary } from '../../api/hooks';
+import { useNotes } from '../../api/noteHooks';
 import type { Category } from '../../api/types';
 import { CATEGORIES } from '../../api/types';
 import { Avatar } from '../../components/ui/Avatar';
@@ -9,6 +18,7 @@ import { CATEGORY_LABELS } from '../../lib/status';
 import { summaryPreset } from '../../lib/view';
 import type { ViewState } from '../../lib/view';
 import type { SetView } from '../filters/FilterFields';
+import { UserMenu } from './UserMenu';
 import styles from './Sidebar.module.css';
 
 export const APP_NAME = 'Team To-Do';
@@ -79,6 +89,7 @@ export function SidebarNav({
   hideBrand,
 }: Props) {
   const { data } = useSummary();
+  const { data: notes } = useNotes('');
   const go = (fn: () => void): void => {
     fn();
     onNavigate?.();
@@ -169,6 +180,20 @@ export function SidebarNav({
 
       <div className={`${styles.group} ${styles.footer}`}>
         <Link
+          to="/notes"
+          className={styles.item}
+          aria-label={rail ? `My notes${notes ? `, ${notes.length}` : ''}` : undefined}
+          title={rail ? 'My notes (private)' : undefined}
+          onClick={onNavigate}
+          data-testid="nav-notes"
+        >
+          <span className={styles.leading}>
+            <NotebookPen size={16} strokeWidth={1.75} aria-hidden="true" />
+          </span>
+          {!rail && <span className={styles.label}>My notes</span>}
+          {!rail && notes && <span className={`${styles.count} num`}>{notes.length}</span>}
+        </Link>
+        <Link
           to="/import"
           className={styles.item}
           aria-label={rail ? 'Import' : undefined}
@@ -197,6 +222,7 @@ export function SidebarNav({
             { label: 'Export Excel', onSelect: () => go(() => onExport('xlsx')) },
           ]}
         />
+        <UserMenu rail={rail} onNavigate={onNavigate} />
       </div>
     </div>
   );

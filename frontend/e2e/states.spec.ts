@@ -274,17 +274,14 @@ test.describe('sheets and the on-screen keyboard', () => {
     const box = await detail.boundingBox();
     expect(box!.height).toBeLessThanOrEqual(380);
 
-    const scroller = detail
-      .locator('div')
-      .filter({ has: page.locator('form') })
-      .last();
-    const info = await scroller.evaluate((el) => {
-      const scrollable = [el, ...el.querySelectorAll<HTMLElement>('div')].find(
-        (d) => getComputedStyle(d).overflowY === 'auto',
-      );
-      return { scrollable: !!scrollable && scrollable.scrollHeight > scrollable.clientHeight };
-    });
-    expect(info.scrollable).toBe(true);
+    // some container of the sheet scrolls (editors have their own, non-scrolling scrollers)
+    const scrollable = await detail.evaluate((root) =>
+      [root, ...root.querySelectorAll<HTMLElement>('*')].some((d) => {
+        const overflow = getComputedStyle(d).overflowY;
+        return (overflow === 'auto' || overflow === 'scroll') && d.scrollHeight > d.clientHeight;
+      }),
+    );
+    expect(scrollable).toBe(true);
 
     // the primary action stays reachable without scrolling
     await expect(detail.getByRole('button', { name: 'Create project' })).toBeInViewport();

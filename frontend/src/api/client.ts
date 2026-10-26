@@ -1,6 +1,12 @@
 import type {
   ActivityEntry,
+  AdminUser,
+  CurrentUser,
   ImportReport,
+  LinkTarget,
+  Note,
+  NotePatch,
+  NoteSummary,
   Meta,
   Page,
   Person,
@@ -17,6 +23,26 @@ import type {
 } from './types';
 
 const BASE = '/api/v1';
+
+/** Every call carries this header; the server refuses writes without it (CSRF guard). */
+export const CSRF_HEADERS = { 'X-Requested-With': 'fetch' } as const;
+
+/** Codes that mean "go to the login / change-password screen". */
+export type AuthProblem = 'not_authenticated' | 'password_change_required';
+type UnauthorizedHandler = (problem: AuthProblem) => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/** Installed by the app shell: called when any request finds the session gone (401) or the
+ *  password still has to be changed (403). Returns a function that removes it. */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler): () => void {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) unauthorizedHandler = null;
+  };
+}
+
+// Their own 401 is an answer for the screen that asked (wrong password, not logged in yet).
+const OWN_AUTH_ANSWER = new Set(['/auth/login', '/auth/me', '/auth/change-password']);
 
 export class ApiError extends Error {
   readonly status: number;
@@ -61,8 +87,14 @@ interface ErrorBody {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(CSRF_HEADERS)) headers.set(key, value);
   try {
-    response = await fetch(`${BASE}${path}`, init);
+    response = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers,
+      credentials: 'same-origin',
+    });
   } catch {
     throw new ApiError(0, 'network_error', 'Cannot reach the server. Check your connection.');
   }
@@ -78,6 +110,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!response.ok) {
     const err = (body as ErrorBody | null)?.error;
+    const problem =
+      response.status === 401
+        ? 'not_authenticated'
+        : err?.code === 'password_change_required'
+          ? 'password_change_required'
+          : null;
+    if (problem && !OWN_AUTH_ANSWER.has(path)) unauthorizedHandler?.(problem);
     throw new ApiError(
       response.status,
       err?.code ?? 'http_error',
@@ -139,6 +178,30 @@ function batchedTasks(projectId: string): Promise<Task[]> {
 }
 
 export const api = {
+  me: () => request<CurrentUser>('/auth/me'),
+  login: (username: string, password: string) =>
+    request<CurrentUser>('/auth/login', json('POST', { username, password })),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>(
+      '/auth/change-password',
+      json('POST', { current_password: currentPassword, new_password: newPassword }),
+    ),
+  users: () => request<AdminUser[]>('/users'),
+  createUser: (username: string, personName: string) =>
+    request<AdminUser>('/users', json('POST', { username, person_name: personName })),
+  patchUser: (id: string, patch: { is_admin?: boolean; is_active?: boolean }) =>
+    request<AdminUser>(`/users/${id}`, json('PATCH', patch)),
+  resetPassword: (id: string) => request<void>(`/users/${id}/reset-password`, { method: 'POST' }),
+  notes: (q: string) => request<NoteSummary[]>(`/notes${toSearch(q ? [['q', q]] : [])}`),
+  note: (id: string) => request<Note>(`/notes/${id}`),
+  createNote: (title: string, body = '') => request<Note>('/notes', json('POST', { title, body })),
+  patchNote: (id: string, version: number, patch: NotePatch) =>
+    request<Note>(`/notes/${id}`, json('PATCH', { version, ...patch })),
+  deleteNote: (id: string) => request<void>(`/notes/${id}`, { method: 'DELETE' }),
+  restoreNote: (id: string) => request<Note>(`/notes/${id}/restore`, { method: 'POST' }),
+  linkTargets: (q: string) =>
+    request<LinkTarget[]>(`/notes/link-targets${toSearch(q ? [['q', q]] : [])}`),
   meta: () => request<Meta>('/meta'),
   stages: () => request<Stage[]>('/stages'),
   persons: () => request<Person[]>('/persons'),

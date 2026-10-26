@@ -8,6 +8,7 @@ import { CATEGORIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { ExpandableText } from '../../components/ui/ExpandableText';
 import { CardSkeleton } from '../../components/ui/Skeleton';
+import { PriorityFlag } from '../../components/ui/PriorityFlag';
 import { StageIcon } from '../../components/ui/StageIcon';
 import { CategoryTag, StatusBadge } from '../../components/ui/Tag';
 import { formatDate } from '../../lib/dates';
@@ -134,6 +135,7 @@ function Card({ project, manual, moves }: CardProps) {
         <CategoryTag category={project.category} />
         <StatusBadge status={project.deadline_status} />
         <span className={styles.stage}>{project.stage.name}</span>
+        {project.priority && <PriorityFlag priority={project.priority} />}
         {project.subtask_total > 0 && (
           <span className={styles.subtasks} data-testid="card-subtasks">
             <ProgressBadge done={project.subtask_done} total={project.subtask_total} />

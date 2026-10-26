@@ -127,3 +127,32 @@ describe('chips and clearing', () => {
     expect(view.stage).toEqual([]);
   });
 });
+
+describe('priority', () => {
+  it('filters by level and "none", in the URL and the API params', () => {
+    const view = parse('priority=urgent,none,bogus&sort=-priority&group=priority');
+    expect(view.priority).toEqual(['urgent', 'none']);
+    expect(view.sort).toBe('priority');
+    expect(view.dir).toBe('desc');
+    expect(view.group).toBe('priority');
+    const sp = serializeView(view);
+    expect(sp.get('priority')).toBe('urgent,none');
+    expect(sp.get('group')).toBe('priority');
+    expect(listParams(view)).toEqual(
+      expect.arrayContaining([
+        ['priority', 'urgent'],
+        ['priority', 'none'],
+        ['sort_by', 'priority'],
+        ['sort_dir', 'desc'],
+      ]),
+    );
+  });
+
+  it('shows a removable chip per priority and clears with the other filters', () => {
+    const view = parse('priority=high,none');
+    const chips = activeChips(view, [], []);
+    expect(chips.map((c) => c.label)).toEqual(['Priority: High', 'Priority: No priority']);
+    expect(chips[0]!.remove(view).priority).toEqual(['none']);
+    expect(clearFilters(view).priority).toEqual([]);
+  });
+});

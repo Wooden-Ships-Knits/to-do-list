@@ -1,5 +1,8 @@
 import { lazy, Suspense } from 'react';
+import type { WikilinkConfig } from './editor/wikilinks';
 import styles from './MarkdownEditor.module.css';
+
+export type { WikilinkConfig };
 
 export interface MarkdownEditorProps {
   /** id of the editable element (the label's target for tests and aria). */
@@ -13,6 +16,8 @@ export interface MarkdownEditorProps {
   invalid?: boolean;
   describedBy?: string;
   minRows?: number;
+  /** Notes only: render [[links]], open them on click and suggest targets after "[[". */
+  wikilinks?: WikilinkConfig;
 }
 
 // CodeMirror is loaded only when an editor is shown, so the table stays fast to load.

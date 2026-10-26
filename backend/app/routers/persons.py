@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.errors import AppError
-from app.models import Person, project_pics
+from app.models import Person, User, project_pics
 from app.schemas import PersonCreate, PersonPatch, PersonRef
 
 router = APIRouter(prefix="/persons", tags=["persons"])
@@ -77,6 +77,12 @@ def update_person(person_id: uuid.UUID, payload: PersonPatch, session: SessionDe
 @router.delete("/{person_id}", status_code=204)
 def delete_person(person_id: uuid.UUID, session: SessionDep) -> Response:
     person = _get(session, person_id)
+    if session.scalar(sa.select(User.id).where(User.person_id == person.id)) is not None:
+        raise AppError(
+            409,
+            "person_has_account",
+            f"{person.name} has a login account. Deactivate the account instead.",
+        )
     in_use = session.scalar(
         sa.select(sa.func.count())
         .select_from(project_pics)

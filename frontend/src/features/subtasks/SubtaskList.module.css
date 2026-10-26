@@ -59,7 +59,7 @@
 /* grip | name | PIC | due date | stage | menu */
 .row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 72px 136px 136px 32px;
+  grid-template-columns: 24px minmax(0, 1fr) 72px 136px 104px 136px 32px;
   align-items: center;
   column-gap: var(--s2);
   min-height: 36px;
@@ -107,6 +107,10 @@ li.row:focus-within .menu,
   .grip,
   .menu {
     opacity: 1;
+  }
+
+  .toggle {
+    min-height: var(--control-h); /* 44px touch target */
   }
 }
 

@@ -1,0 +1,238 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4);
+  padding-left: max(var(--s4), var(--safe-left));
+  padding-right: max(var(--s4), var(--safe-right));
+  padding-bottom: max(var(--s5), var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.titleRow h1 {
+  font-size: 20px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--control-h);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.card {
+  margin: 0;
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.tableWrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: var(--surface-alt);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted-aa);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.whoText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.name {
+  font-weight: 500;
+}
+
+.me,
+.username,
+.muted {
+  color: var(--text-muted-aa);
+}
+
+.username {
+  font-size: 12px;
+}
+
+.note {
+  display: block;
+  font-size: 12px;
+  color: var(--warning-fg);
+}
+
+.inactive .name {
+  color: var(--text-muted-aa);
+}
+
+.actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.link {
+  color: var(--accent-text);
+  font-size: 13px;
+}
+
+/* Add-user dialog */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.field input {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted-aa);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.formError {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* Phones: each user is a small card (labels next to the values) */
+@media (max-width: 639.98px) {
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tr {
+    position: relative;
+    padding: var(--s3) var(--s4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table td {
+    display: flex;
+    gap: var(--s2);
+    padding: var(--s1) 0;
+    border: 0;
+  }
+
+  .table td[data-label]:not(:first-child)::before {
+    content: attr(data-label);
+    flex: none;
+    width: 88px;
+    color: var(--text-muted-aa);
+    font-size: 12px;
+  }
+
+  .table td:first-child {
+    padding-right: 52px; /* room for the menu button */
+    padding-bottom: var(--s2);
+  }
+
+  .actions {
+    position: absolute;
+    top: var(--s2);
+    right: var(--s2);
+    width: auto;
+  }
+
+  .table td.actions {
+    display: block;
+    width: auto;
+  }
+}

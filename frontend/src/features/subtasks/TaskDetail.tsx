@@ -6,6 +6,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useMeta, usePersons, useStages } from '../../api/hooks';
 import { useTasks } from '../../api/taskHooks';
 import type { Task } from '../../api/types';
+import { PRIORITIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
@@ -18,9 +19,11 @@ import {
   toTaskFormValues,
 } from '../../lib/schema';
 import type { TaskFormValues } from '../../lib/schema';
+import { NO_PRIORITY, PRIORITY_LABELS } from '../../lib/priority';
 import { DONE_STAGE } from '../../lib/status';
 import { ancestorIds } from '../../lib/tasks';
 import { ActivityList } from '../detail/ActivityList';
+import { CreatedBy } from '../detail/CreatedBy';
 import { DetailFooter, DetailLayout } from '../detail/DetailLayout';
 import form from '../detail/ProjectForm.module.css';
 import { SubtaskList } from './SubtaskList';
@@ -136,6 +139,7 @@ function TaskForm({
         />
         <FieldError id={errorId('name')} message={errors.name?.message} />
       </div>
+      <CreatedBy actor={task.created_by} at={task.created_at} />
 
       <div className={form.props}>
         <div className={form.field}>
@@ -149,6 +153,17 @@ function TaskForm({
                 {s.name}
               </option>
             ))}
+          </select>
+        </div>
+        <div className={form.field}>
+          <label htmlFor="tf-priority">Priority</label>
+          <select id="tf-priority" {...register('priority')}>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABELS[p]}
+              </option>
+            ))}
+            <option value="">{NO_PRIORITY}</option>
           </select>
         </div>
         {(

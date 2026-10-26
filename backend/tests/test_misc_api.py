@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from freezegun import freeze_time
 
 from app.db import get_engine
-from tests.conftest import Api
+from tests.conftest import Account, Api, client_for
 
 
 def test_health_ok_and_both_paths(client: TestClient) -> None:
@@ -90,9 +90,11 @@ def test_persons_crud(client: TestClient, api: Api) -> None:
     bob = api.person("Bob")
     assert client.patch(f"/api/v1/persons/{bob['id']}", json={"name": "ANNA"}).status_code == 409
     assert client.patch(f"/api/v1/persons/{bob['id']}", json={"name": None}).status_code == 422
-    assert [p["name"] for p in client.get("/api/v1/persons").json()] == ["Anna", "Bob"]
+    # "Tester" is the logged-in user's own person.
+    assert [p["name"] for p in client.get("/api/v1/persons").json()] == ["Anna", "Bob", "Tester"]
     assert [p["name"] for p in client.get("/api/v1/persons?include_inactive=false").json()] == [
-        "Bob"
+        "Bob",
+        "Tester",
     ]
     assert client.delete(f"/api/v1/persons/{bob['id']}").status_code == 204
     assert client.get(f"/api/v1/persons/{bob['id']}").status_code == 404
@@ -129,15 +131,16 @@ def test_summary(client: TestClient, api: Api) -> None:
         "on_track": 0,
     }
     pics = {p["name"]: p["count"] for p in s["by_pic"]}
-    assert pics == {"Ann": 2, "Bob": 1, "Idle": 0}  # inactive person with no projects is hidden
+    # inactive person with no projects is hidden; "Tester" is the logged-in user's person
+    assert pics == {"Ann": 2, "Bob": 1, "Idle": 0, "Tester": 0}
     assert s["unassigned"] == 2
 
 
-def test_concurrent_patches_only_one_wins(client: TestClient, api: Api) -> None:
+def test_concurrent_patches_only_one_wins(client: TestClient, api: Api, me: Account) -> None:
     p = api.project("Alpha")
 
     def attempt(i: int) -> int:
-        with TestClient(client.app, raise_server_exceptions=False) as c:
+        with client_for(me) as c:
             return c.patch(
                 f"/api/v1/projects/{p['id']}", json={"version": 1, "description": f"w{i}"}
             ).status_code

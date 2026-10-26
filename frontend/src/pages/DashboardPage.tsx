@@ -44,6 +44,7 @@ const SIDEBAR_KEY = 'todo.sidebar';
 const GROUP_LABELS: Record<GroupBy, string> = {
   category: 'Category',
   stage: 'Stage',
+  priority: 'Priority',
   none: 'None',
 };
 
@@ -251,7 +252,7 @@ export function DashboardPage() {
                     Group: {GROUP_LABELS[view.group]}
                   </>
                 }
-                items={(['category', 'stage', 'none'] as const).map((g) => ({
+                items={(['category', 'stage', 'priority', 'none'] as const).map((g) => ({
                   label: GROUP_LABELS[g],
                   checked: view.group === g,
                   onSelect: () => setView((v) => ({ ...v, group: g })),

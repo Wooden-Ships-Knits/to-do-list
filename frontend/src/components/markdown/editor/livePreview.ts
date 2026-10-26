@@ -97,7 +97,12 @@ export function activeLines(state: EditorState, focused: boolean): Set<number> {
   return lines;
 }
 
-function touches(state: EditorState, active: Set<number>, from: number, to: number): boolean {
+export function touches(
+  state: EditorState,
+  active: Set<number>,
+  from: number,
+  to: number,
+): boolean {
   const first = state.doc.lineAt(from).number;
   const last = state.doc.lineAt(to).number;
   for (let n = first; n <= last; n++) if (active.has(n)) return true;

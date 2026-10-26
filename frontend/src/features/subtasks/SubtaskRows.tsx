@@ -14,7 +14,7 @@ import { formatDate } from '../../lib/dates';
 import { expandedStore, useExpanded } from '../../lib/expanded';
 import { ancestorIds, visibleTasks } from '../../lib/tasks';
 import { DragHandle } from '../dnd/DragHandle';
-import { DateCell, PicCell, StageCell } from '../table/InlineEditors';
+import { DateCell, PicCell, PriorityCell, StageCell } from '../table/InlineEditors';
 import table from '../table/ProjectTable.module.css';
 import { AddTaskInput, DoneCheckbox, FoldToggle, NotesMark, TaskMenu } from './parts';
 import { useTaskActions } from './TaskActions';
@@ -115,6 +115,10 @@ function TaskRow({
             stages={stages}
             onSave={(stageId) => actions.patch(task, { stage_id: stageId })}
           />
+        );
+      case 'priority':
+        return (
+          <PriorityCell project={task} onSave={(priority) => actions.patch(task, { priority })} />
         );
       case 'status_notes':
         return task.notes ? <ExpandableText text={task.notes} markdown /> : null;

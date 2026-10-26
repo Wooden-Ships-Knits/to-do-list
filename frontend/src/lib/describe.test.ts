@@ -1,5 +1,5 @@
 import type { ActivityEntry } from '../api/types';
-import { describeActivity } from './describe';
+import { actorName, describeActivity, describePatch } from './describe';
 
 const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
   id: 1,
@@ -10,6 +10,7 @@ const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
   old_value: null,
   new_value: null,
   changed_at: '2026-10-06T04:00:00Z',
+  actor: null,
   ...over,
 });
 
@@ -52,5 +53,28 @@ describe('project history: subtask entries', () => {
     expect(describeActivity(entry({ field: 'project', new_value: 'created' }))).toBe(
       'Project created',
     );
+  });
+});
+
+describe('priority and who made the change', () => {
+  it('names priority levels and "none"', () => {
+    expect(
+      describeActivity(entry({ field: 'priority', old_value: null, new_value: 'urgent' })),
+    ).toBe('Priority: none to Urgent');
+    expect(describeActivity(entry({ field: 'priority', old_value: 'low', new_value: null }))).toBe(
+      'Priority: Low to none',
+    );
+    expect(
+      describeActivity(
+        entry({ task_id: 't', task_name: 'Sub', field: 'priority', new_value: 'high' }),
+      ),
+    ).toBe('Subtask "Sub": Priority none to High');
+    expect(describePatch({ priority: 'normal' }, [], [])).toEqual(['Priority: Normal']);
+    expect(describePatch({ priority: null }, [], [])).toEqual(['Priority: None']);
+  });
+
+  it('shows the actor, or Unknown for old entries', () => {
+    expect(actorName({ id: 'u', username: 'denan', name: 'Denan' })).toBe('Denan');
+    expect(actorName(null)).toBe('Unknown');
   });
 });

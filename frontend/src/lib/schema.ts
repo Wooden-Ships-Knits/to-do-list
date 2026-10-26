@@ -1,7 +1,19 @@
 import { z } from 'zod';
-import type { Project, ProjectCreateBody, ProjectPatch, Task, TaskPatch } from '../api/types';
-import { CATEGORIES } from '../api/types';
+import type {
+  Priority,
+  Project,
+  ProjectCreateBody,
+  ProjectPatch,
+  Task,
+  TaskPatch,
+} from '../api/types';
+import { CATEGORIES, PRIORITIES } from '../api/types';
 import { MAX_DATE, MIN_DATE, isValidIsoDate } from './dates';
+
+/** "" in a form = no priority. */
+export const priorityField = z.enum(['', ...PRIORITIES]);
+type PriorityValue = z.infer<typeof priorityField>;
+const toPriority = (v: PriorityValue): Priority | null => (v === '' ? null : v);
 
 /** Same rules as the backend Pydantic models. */
 export const optionalDate = z
@@ -35,6 +47,7 @@ export function makeProjectSchema(today: string) {
       'Actual date cannot be in the future',
     ),
     projected_start_date: optionalDate,
+    priority: priorityField,
     pic_ids: z.array(z.string()),
   });
 }
@@ -57,6 +70,7 @@ export function emptyFormValues(
     adjusted_plan_date: '',
     actual_date: '',
     projected_start_date: '',
+    priority: '',
     pic_ids: [],
   };
 }
@@ -74,6 +88,7 @@ export function toFormValues(p: Project): ProjectFormValues {
     adjusted_plan_date: p.adjusted_plan_date ?? '',
     actual_date: p.actual_date ?? '',
     projected_start_date: p.projected_start_date ?? '',
+    priority: p.priority ?? '',
     pic_ids: p.pics.map((x) => x.id),
   };
 }
@@ -93,6 +108,7 @@ export function toCreateBody(v: ProjectFormValues): ProjectCreateBody {
     adjusted_plan_date: nullable(v.adjusted_plan_date),
     actual_date: nullable(v.actual_date),
     projected_start_date: nullable(v.projected_start_date),
+    priority: toPriority(v.priority),
     pic_ids: v.pic_ids,
   };
 }
@@ -120,6 +136,7 @@ export function diffToPatch(original: ProjectFormValues, next: ProjectFormValues
   if (body.projected_start_date !== base.projected_start_date) {
     patch.projected_start_date = body.projected_start_date;
   }
+  if (body.priority !== base.priority) patch.priority = body.priority;
   if (!sameSet(body.pic_ids, base.pic_ids)) patch.pic_ids = body.pic_ids;
   return patch;
 }
@@ -151,6 +168,7 @@ export function makeTaskSchema(today: string) {
       (v) => v === '' || v <= today,
       'Actual date cannot be in the future',
     ),
+    priority: priorityField,
     pic_ids: z.array(z.string()),
   });
 }
@@ -165,6 +183,7 @@ export function toTaskFormValues(t: Task): TaskFormValues {
     plan_date: t.plan_date ?? '',
     adjusted_plan_date: t.adjusted_plan_date ?? '',
     actual_date: t.actual_date ?? '',
+    priority: t.priority ?? '',
     pic_ids: t.pics.map((x) => x.id),
   };
 }
@@ -178,6 +197,7 @@ export function diffTaskPatch(original: TaskFormValues, next: TaskFormValues): T
   for (const key of ['plan_date', 'adjusted_plan_date', 'actual_date'] as const) {
     if (next[key] !== original[key]) patch[key] = nullable(next[key]);
   }
+  if (next.priority !== original.priority) patch.priority = toPriority(next.priority);
   if (!sameSet(next.pic_ids, original.pic_ids)) patch.pic_ids = next.pic_ids;
   return patch;
 }

@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     app_timezone: str = "Asia/Makassar"
     cors_origins: str = ""
     log_level: str = "INFO"
+    # Send the session cookie only over HTTPS (set true behind TLS).
+    cookie_secure: bool = False
+    # A session ends after this many days without use.
+    session_days: int = 30
 
     @property
     def cors_origin_list(self) -> list[str]:

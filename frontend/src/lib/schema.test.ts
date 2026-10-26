@@ -89,6 +89,7 @@ describe('subtask form', () => {
     plan_date: '2026-10-10',
     adjusted_plan_date: '',
     actual_date: '',
+    priority: '' as const,
     pic_ids: [],
   };
 
@@ -106,5 +107,23 @@ describe('subtask form', () => {
     expect(
       diffTaskPatch(valid, { ...valid, plan_date: '', notes: '**x**', pic_ids: ['u'] }),
     ).toEqual({ plan_date: null, notes: '**x**', pic_ids: ['u'] });
+  });
+
+  it('sends priority changes, blank = no priority', () => {
+    expect(schema.safeParse({ ...valid, priority: 'urgent' }).success).toBe(true);
+    expect(schema.safeParse({ ...valid, priority: 'critical' }).success).toBe(false);
+    expect(diffTaskPatch(valid, { ...valid, priority: 'high' })).toEqual({ priority: 'high' });
+    expect(diffTaskPatch({ ...valid, priority: 'high' }, valid)).toEqual({ priority: null });
+  });
+});
+
+describe('project priority', () => {
+  it('is optional, validated, and only sent when changed', () => {
+    expect(toCreateBody(valid).priority).toBeNull();
+    expect(toCreateBody({ ...valid, priority: 'low' }).priority).toBe('low');
+    expect(schema.safeParse({ ...valid, priority: 'LOW' }).success).toBe(false);
+    expect(diffToPatch(valid, valid)).toEqual({});
+    expect(diffToPatch(valid, { ...valid, priority: 'urgent' })).toEqual({ priority: 'urgent' });
+    expect(diffToPatch({ ...valid, priority: 'urgent' }, valid)).toEqual({ priority: null });
   });
 });

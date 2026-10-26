@@ -1,0 +1,43 @@
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.flag svg {
+  flex: none;
+  color: var(--flag-colour);
+}
+
+.filled {
+  fill: var(--flag-colour);
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.urgent {
+  --flag-colour: var(--priority-urgent);
+}
+
+.high {
+  --flag-colour: var(--priority-high);
+}
+
+.normal {
+  --flag-colour: var(--priority-normal);
+}
+
+.low {
+  --flag-colour: var(--priority-low);
+}
+
+.none {
+  --flag-colour: var(--priority-none);
+  color: var(--text-muted-aa);
+}

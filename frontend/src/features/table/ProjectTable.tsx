@@ -6,11 +6,12 @@ import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { PAGE_SIZE, useCreateProject, useProjectsPage, useStages } from '../../api/hooks';
-import type { Category, Person, Project, Stage } from '../../api/types';
+import type { Category, Person, Priority, Project, Stage } from '../../api/types';
 import { CATEGORIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { TableSkeleton } from '../../components/ui/Skeleton';
 import { StageIcon } from '../../components/ui/StageIcon';
+import { PriorityFlag } from '../../components/ui/PriorityFlag';
 import { CategoryTag } from '../../components/ui/Tag';
 import { useToast } from '../../components/Toast';
 import {
@@ -22,6 +23,8 @@ import {
 } from '../../lib/columnSettings';
 import type { ColumnId, ColumnSettings, TableLayout } from '../../lib/columnSettings';
 import { expandedStore, isProjectOpen, useExpanded } from '../../lib/expanded';
+import { filterLabel, PRIORITY_FILTERS } from '../../lib/priority';
+import type { PriorityFilter } from '../../lib/priority';
 import { CATEGORY_LABELS } from '../../lib/status';
 import { clearFilters, hasActiveFilters } from '../../lib/view';
 import type { SortKey, ViewState } from '../../lib/view';
@@ -220,6 +223,27 @@ function CategoryGroupRow({
   );
 }
 
+function PriorityGroupRow({
+  level,
+  ...rest
+}: Omit<GroupHeaderProps, 'label' | 'name'> & { level: PriorityFilter }) {
+  return (
+    <tr className={styles.groupRow} data-group={`priority:${level}`}>
+      <td colSpan={rest.colSpan}>
+        <GroupHeader
+          {...rest}
+          name={filterLabel(level)}
+          label={
+            <span className={`${styles.groupPill} ${styles.stagePill}`}>
+              <PriorityFlag priority={level === 'none' ? null : level} />
+            </span>
+          }
+        />
+      </td>
+    </tr>
+  );
+}
+
 function StageGroupRow({
   stage,
   ...rest
@@ -247,12 +271,15 @@ function StageGroupRow({
 function QuickAddRow({
   category,
   stage,
+  priority,
   colSpan,
   startOpen,
   onClosed,
 }: {
   category: Category;
   stage?: Stage;
+  /** In a priority group the new project gets that priority. */
+  priority?: Priority | null;
   colSpan: number;
   startOpen: boolean;
   onClosed: () => void;
@@ -263,7 +290,11 @@ function QuickAddRow({
   const [open, setOpen] = useState(startOpen);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const label = stage ? stage.name : CATEGORY_LABELS[category];
+  const label = stage
+    ? stage.name
+    : priority !== undefined
+      ? filterLabel(priority ?? 'none')
+      : CATEGORY_LABELS[category];
 
   const cancel = (): void => {
     setOpen(false);
@@ -292,6 +323,7 @@ function QuickAddRow({
         actual_date: null,
         projected_start_date: null,
         deadline_note: '',
+        priority: priority ?? null,
         pic_ids: [],
       },
       {
@@ -305,7 +337,16 @@ function QuickAddRow({
   };
 
   return (
-    <tr className={styles.addRow} data-add-row={stage ? `stage:${stage.name}` : category}>
+    <tr
+      className={styles.addRow}
+      data-add-row={
+        stage
+          ? `stage:${stage.name}`
+          : priority !== undefined
+            ? `priority:${priority ?? 'none'}`
+            : category
+      }
+    >
       <td colSpan={colSpan}>
         {open ? (
           <div className={styles.addForm}>
@@ -360,6 +401,7 @@ interface Segment {
   key: string;
   category: Category | null;
   stage: Stage | null;
+  priority: PriorityFilter | null;
   rows: Row<Project>[];
 }
 
@@ -383,8 +425,8 @@ export function ProjectTable({
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const manual = view.sort === null;
   // Manual order is per category, so rows can be dragged when grouped by category (or not
-  // grouped). Grouped by stage, the order inside a stage is not a stored order.
-  const draggable = manual && view.group !== 'stage';
+  // grouped). Grouped by stage or priority, the order inside a group is not a stored order.
+  const draggable = manual && (view.group === 'category' || view.group === 'none');
   const showNumber = settings.showNumber;
   const expanded = useExpanded();
   const isOpen = useCallback(
@@ -459,15 +501,26 @@ export function ProjectTable({
           key: `stage:${stage.id}`,
           category: null,
           stage,
+          priority: null,
           rows: rows.filter((r) => r.original.stage_id === stage.id),
         }))
         .filter((s) => s.rows.length > 0);
+    }
+    if (view.group === 'priority') {
+      return PRIORITY_FILTERS.map((level) => ({
+        key: `priority:${level}`,
+        category: null,
+        stage: null,
+        priority: level,
+        rows: rows.filter((r) => (r.original.priority ?? 'none') === level),
+      })).filter((s) => s.rows.length > 0);
     }
     if (draggable) {
       return CATEGORIES.map((category) => ({
         key: category,
         category,
         stage: null,
+        priority: null,
         rows: dnd.containers[category]
           .map((id) => rowById.get(id))
           .filter((r): r is Row<Project> => !!r),
@@ -478,10 +531,11 @@ export function ProjectTable({
         key: category,
         category,
         stage: null,
+        priority: null,
         rows: rows.filter((r) => r.original.category === category),
       }));
     }
-    return [{ key: 'all', category: null, stage: null, rows }];
+    return [{ key: 'all', category: null, stage: null, priority: null, rows }];
   }, [view.group, stages, draggable, dnd.containers, rowById, rows]);
 
   const visibleColumns = table.getVisibleLeafColumns();
@@ -605,9 +659,9 @@ export function ProjectTable({
           </Button>
         </div>
       )}
-      {manual && view.group === 'stage' && (
+      {manual && (view.group === 'stage' || view.group === 'priority') && (
         <div className={styles.orderNote} role="status" data-testid="order-note">
-          <span>Grouped by stage. Group by category to rearrange.</span>
+          <span>Grouped by {view.group}. Group by category to rearrange.</span>
           <Button onClick={() => setView((v) => ({ ...v, group: 'category' }))}>
             Group by category
           </Button>
@@ -668,13 +722,14 @@ export function ProjectTable({
             </thead>
             <tbody>
               {segments.map((segment) => {
-                const { category, stage, key } = segment;
+                const { category, stage, priority, key } = segment;
                 const isCollapsed = collapsed.has(key);
                 // In manual order every category keeps its header (even when empty), so the
                 // layout does not shift when a drag starts and an empty category can still
                 // receive a row.
                 const showHeader =
                   stage !== null ||
+                  priority !== null ||
                   (category !== null &&
                     view.group === 'category' &&
                     (segment.rows.length > 0 ||
@@ -735,6 +790,9 @@ export function ProjectTable({
                 return (
                   <Fragment key={key}>
                     {showHeader && stage && <StageGroupRow stage={stage} {...headerProps} />}
+                    {showHeader && priority && (
+                      <PriorityGroupRow level={priority} {...headerProps} />
+                    )}
                     {showHeader && category && (
                       <CategoryGroupRow category={category} {...headerProps} />
                     )}
@@ -753,6 +811,9 @@ export function ProjectTable({
                         key={`${key}-${quickAdd === key ? 'open' : 'idle'}`}
                         category={category ?? tabCategory}
                         stage={stage ?? undefined}
+                        priority={
+                          priority === null ? undefined : priority === 'none' ? null : priority
+                        }
                         colSpan={colSpan}
                         startOpen={quickAdd === key}
                         onClosed={() => setQuickAdd(null)}

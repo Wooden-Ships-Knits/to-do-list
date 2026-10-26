@@ -72,9 +72,11 @@ test.describe('columns', () => {
     test.skip(layout === 'mobile' || !!testInfo.project.use.hasTouch, 'mouse + table layouts only');
     await app.create('Resize');
     await app.goto();
-    const th = page.locator('th[data-col="name"]');
+    // the Project column takes the remaining width (no handle); the others have set widths
+    await expect(page.getByRole('button', { name: /^Resize Project column/ })).toHaveCount(0);
+    const th = page.locator('th[data-col="stage"]');
     const before = (await th.boundingBox())!.width;
-    const handle = page.getByRole('button', { name: /^Resize Project column/ });
+    const handle = page.getByRole('button', { name: /^Resize Stage column/ });
     const box = (await handle.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
@@ -84,16 +86,16 @@ test.describe('columns', () => {
     const widened = (await th.boundingBox())!.width;
     await page.reload();
     await app.ready();
-    expect((await page.locator('th[data-col="name"]').boundingBox())!.width).toBeCloseTo(
+    expect((await page.locator('th[data-col="stage"]').boundingBox())!.width).toBeCloseTo(
       widened,
       -1,
     );
     // keyboard resizing
-    await page.getByRole('button', { name: /^Resize Project column/ }).focus();
+    await page.getByRole('button', { name: /^Resize Stage column/ }).focus();
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     await expect
-      .poll(async () => (await page.locator('th[data-col="name"]').boundingBox())!.width)
+      .poll(async () => (await page.locator('th[data-col="stage"]').boundingBox())!.width)
       .toBeLessThan(widened - 10);
   });
 

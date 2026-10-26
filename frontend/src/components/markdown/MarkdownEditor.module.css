@@ -162,6 +162,91 @@
   cursor: pointer;
 }
 
+/* GFM tables (rendered while the cursor is outside them; same look as the read-only view) */
+.editor :global(.cm-md-table-wrap) {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: var(--s1) var(--s2); /* lines up with the text (.cm-line padding) */
+  cursor: text;
+}
+
+.editor :global(.cm-md-table) {
+  border-collapse: collapse;
+}
+
+.editor :global(.cm-md-table th),
+.editor :global(.cm-md-table td) {
+  border: 1px solid var(--border);
+  padding: var(--s1) var(--s2);
+  text-align: left;
+  vertical-align: top;
+}
+
+.editor :global(.cm-md-table th) {
+  font-weight: 600;
+  background: var(--surface-alt);
+}
+
+.editor :global(.cm-md-table code) {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-raised);
+  border-radius: 3px;
+}
+
+.editor :global(.cm-md-table del) {
+  color: var(--text-muted-aa);
+}
+
+/* [[links]] in notes: like links; a link to a note that does not exist yet is faint */
+.editor :global(.cm-md-wikilink) {
+  color: var(--accent-text);
+}
+
+.editor :global([data-wikilink]) {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editor :global(.cm-md-wikilink-unresolved) {
+  color: var(--text-muted-aa);
+  text-decoration-style: dashed;
+}
+
+/* the [[ suggestions */
+.editor :global(.cm-tooltip.cm-tooltip-autocomplete) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.editor :global(.cm-editor .cm-tooltip.cm-tooltip-autocomplete > ul) {
+  max-height: 16em;
+  font-family: var(--font-ui); /* beats CodeMirror's monospace default */
+}
+
+.editor :global(.cm-editor .cm-tooltip.cm-tooltip-autocomplete > ul > li) {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+}
+
+.editor :global(.cm-editor .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]) {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.editor :global(.cm-editor .cm-completionDetail) {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-muted-aa);
+}
+
 /* 16px text on touch devices / phones so iOS does not zoom into the editor */
 @media (pointer: coarse), (max-width: 639.98px) {
   .editor :global(.cm-editor) {
