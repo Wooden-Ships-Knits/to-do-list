@@ -19,6 +19,10 @@ up:             ## Production-style stack (nginx) on :8090
 down:
 	$(COMPOSE) down
 
+seed-users:     ## Only the 5 login accounts (password = username); never touches projects
+	$(COMPOSE) up -d --wait db backend
+	$(COMPOSE) exec backend python -m app.seed users
+
 seed:           ## Idempotent seed data
 	$(COMPOSE) up -d --wait db backend
 	$(COMPOSE) exec backend python -m app.seed
