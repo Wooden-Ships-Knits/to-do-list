@@ -9,6 +9,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { insertLink, toggleLinePrefix, toggleTask, toggleWrap } from './commands';
 import { livePreview, openLinkOnModClick } from './livePreview';
+import { tablePreview } from './tablePreview';
 import type { MarkdownEditorProps } from '../MarkdownEditor';
 import styles from '../MarkdownEditor.module.css';
 
@@ -80,6 +81,7 @@ export default function MarkdownEditorImpl({
           // raw HTML is never rendered anyway).
           new LanguageSupport(markdownLanguage),
           livePreview,
+          tablePreview,
           openLinkOnModClick,
           EditorView.lineWrapping,
           placeholder ? placeholderExt(placeholder) : [],
