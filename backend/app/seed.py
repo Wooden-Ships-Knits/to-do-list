@@ -1,6 +1,7 @@
 """Idempotent seed: running it twice never duplicates data."""
 
 import logging
+import sys
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -186,18 +187,32 @@ def seed_stages(session: Session) -> dict[str, Stage]:
     return existing
 
 
-def seed(session: Session) -> dict[str, int]:
-    stages = seed_stages(session)
+def seed_people(session: Session) -> tuple[dict[str, Person], int]:
+    """The team members (by lower-case name), creating the missing ones."""
     people = {p.name.lower(): p for p in session.scalars(sa.select(Person))}
-    created_people = 0
+    created = 0
     for name in PEOPLE:
         if name.lower() not in people:
             person = Person(name=name)
             session.add(person)
             people[name.lower()] = person
-            created_people += 1
+            created += 1
     session.flush()
+    return people, created
 
+
+def seed_accounts(session: Session) -> dict[str, int]:
+    """Only the login accounts (and their people if missing). Never touches projects, so it is
+    safe on a database with real data: `python -m app.seed users`."""
+    people, created_people = seed_people(session)
+    created_users = seed_users(session, people)
+    session.commit()
+    return {"people": created_people, "users": created_users}
+
+
+def seed(session: Session) -> dict[str, int]:
+    stages = seed_stages(session)
+    people, created_people = seed_people(session)
     created_users = seed_users(session, people)
 
     existing_names = {
@@ -256,8 +271,18 @@ def seed_users(session: Session, people: dict[str, Person]) -> int:
     return created
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    args = sys.argv[1:] if argv is None else argv
+    if args == ["users"]:
+        with session_factory()() as session:
+            accounts = seed_accounts(session)
+        log.info(
+            "Accounts: %s new people, %s new users (projects untouched)",
+            accounts["people"],
+            accounts["users"],
+        )
+        return
     with session_factory()() as session:
         result = seed(session)
     log.info(

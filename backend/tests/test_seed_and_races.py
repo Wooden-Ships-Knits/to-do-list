@@ -75,3 +75,26 @@ def test_unexpected_integrity_error_is_409_without_leaking_sql(
     r = client.get("/api/v1/projects")
     assert r.status_code == 409 and r.json()["error"]["code"] == "integrity_error"
     assert "secret" not in r.text
+
+
+def test_seed_users_only_creates_accounts_and_never_touches_projects(api: Api) -> None:
+    """`make seed-users` on a database with real data: no sample project comes back."""
+    from app.seed import main, seed_accounts
+
+    api.project("Real project")
+    with Session(get_engine()) as session:
+        assert seed_accounts(session) == {"people": 5, "users": 5}
+        assert seed_accounts(session) == {"people": 0, "users": 0}
+    main(["users"])  # the command itself, run again: still nothing new
+    with get_engine().connect() as conn:
+        names = list(conn.scalars(sa.text("SELECT name FROM projects")))
+        users = list(conn.scalars(sa.text("SELECT username FROM users ORDER BY username")))
+        flags = conn.execute(
+            sa.text(
+                "SELECT bool_and(is_admin), bool_and(must_change_password) FROM users"
+                " WHERE username <> 'tester'"
+            )
+        ).one()
+    assert names == ["Real project"]
+    assert users == ["andika", "denan", "dzawil", "luthfi", "prada", "tester"]
+    assert tuple(flags) == (True, True)

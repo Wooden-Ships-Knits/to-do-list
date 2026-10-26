@@ -35,6 +35,7 @@ First time only: `cd frontend && npm ci && npx playwright install chromium`.
 | `make dev`              | Hot-reload stack (backend `uvicorn --reload`, frontend Vite)                                                                                                                |
 | `make up` / `make down` | Production-style stack in the background / stop it                                                                                                                          |
 | `make seed`             | Idempotent sample data (running it twice never duplicates anything)                                                                                                         |
+| `make seed-users`       | Only the 5 login accounts (first password = username); never touches projects, safe on real data                                                                            |
 | `make reset-db`         | Drops the database volume, migrates, seeds                                                                                                                                  |
 | `make lint`             | ruff + ruff format + mypy (backend); tsc + eslint (0 warnings) + prettier (frontend)                                                                                        |
 | `make test`             | pytest on a real PostgreSQL (coverage gate 85%) + Vitest                                                                                                                    |
@@ -60,9 +61,24 @@ there (the dump drops and recreates the tables). A dump contains the login accou
 argon2 password hashes (never plain passwords) and the active sessions, so treat it as private.
 Database credentials only live in `.env` (not committed, see `.env.example`).
 
+## Deploying an update to a server that has real data
+
+Never run `make reset-db` or `docker compose down -v` there: both delete the database volume.
+
+```bash
+make dump-db DUMP=db-dump/before-update.sql   # 1. backup (restore with make restore-db DUMP=...)
+git pull                                      # 2. new code
+make up                                       # 3. rebuild + restart; migrations run on start
+make seed-users                               # 4. only when logins are new: creates the 5 accounts
+```
+
+`make seed-users` only adds the login accounts (and their people if missing); it never touches
+projects. Do not use `make seed` on real data: it adds the sample projects back when it cannot
+find them by name. Behind HTTPS, set `COOKIE_SECURE=true` in `.env` before step 3.
+
 ## Logins
 
-Every page and API call needs a login. `make seed` creates the accounts `denan`, `luthfi`,
+Every page and API call needs a login. `make seed-users` (or `make seed`) creates the accounts `denan`, `luthfi`,
 `dzawil`, `prada` and `andika` (all admins); the first password is the username and must be
 changed at the first login. Admins add people, reset passwords (back to the username) and
 deactivate accounts on the Users screen. Sessions are server-side (HttpOnly cookie, ended after

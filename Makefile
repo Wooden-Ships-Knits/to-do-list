@@ -3,7 +3,7 @@ COMPOSE_DEV  := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
 DUMP ?= db-dump/todo.sql
 
-.PHONY: dump-db restore-db dev up down seed reset-db test test-backend test-frontend e2e lighthouse acceptance lint lint-backend lint-frontend
+.PHONY: dump-db restore-db dev up down seed seed-users reset-db test test-backend test-frontend e2e lighthouse acceptance lint lint-backend lint-frontend
 
 dev:            ## Hot-reload stack: Vite on :5173, API on :8000
 	$(COMPOSE_DEV) up --build
