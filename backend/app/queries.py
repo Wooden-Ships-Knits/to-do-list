@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql.expression import SQLColumnExpression
 
 from app.deadline import DUE_SOON_DAYS, DeadlineStatus
-from app.models import Category, Person, Project, Stage, Task, project_pics, task_pics
+from app.models import Category, Person, Priority, Project, Stage, Task, project_pics, task_pics
 
 DATE_FIELDS = (
     "plan_date",
@@ -33,6 +33,7 @@ SortBy = Literal[
     "projected_start_date",
     "pic",
     "deadline_status",
+    "priority",
     "created_at",
     "updated_at",
 ]
@@ -53,6 +54,8 @@ class ProjectFilters:
     pic_ids: list[uuid.UUID] = field(default_factory=list)
     pic_none: bool = False
     statuses: list[DeadlineStatus] = field(default_factory=list)
+    priorities: list[Priority] = field(default_factory=list)
+    priority_none: bool = False
     search: str | None = None
     name: str | None = None
     description: str | None = None
@@ -150,6 +153,13 @@ def build_where(f: ProjectFilters, today: date) -> list[sa.ColumnElement[bool]]:
         where.append(sa.or_(*parts))
     if f.statuses:
         where.append(status_expr(today).in_([s.value for s in f.statuses]))
+    if f.priorities or f.priority_none:
+        wanted: list[sa.ColumnElement[bool]] = []
+        if f.priorities:
+            wanted.append(Project.priority.in_(f.priorities))
+        if f.priority_none:
+            wanted.append(Project.priority.is_(None))
+        where.append(sa.or_(*wanted))
     if f.search:
         where.append(
             sa.or_(
@@ -191,6 +201,14 @@ def _status_rank(today: date) -> sa.ColumnElement[int]:
     )
 
 
+PRIORITY_RANK = {Priority.urgent: 1, Priority.high: 2, Priority.normal: 3, Priority.low: 4}
+
+
+def _priority_rank() -> sa.ColumnElement[int]:
+    """Urgent first; NULL (no priority) stays NULL so it sorts last in both directions."""
+    return sa.case(*((Project.priority == p, rank) for p, rank in PRIORITY_RANK.items()))
+
+
 def _first_pic_name() -> sa.ColumnElement[str]:
     return (
         sa.select(sa.func.min(sa.func.lower(Person.name)))
@@ -226,6 +244,7 @@ def order_by(sort_by: SortBy, sort_dir: SortDir, today: date) -> list[SQLColumnE
         "projected_start_date": Project.projected_start_date,
         "pic": _first_pic_name(),
         "deadline_status": _status_rank(today),
+        "priority": _priority_rank(),
         "created_at": Project.created_at,
         "updated_at": Project.updated_at,
     }

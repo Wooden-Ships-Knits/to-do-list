@@ -5,6 +5,7 @@ from typing import Annotated, Any
 from pydantic import (
     AfterValidator,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     StringConstraints,
@@ -13,7 +14,16 @@ from pydantic import (
 
 from app.clock import today
 from app.deadline import DeadlineStatus, deadline_status, effective_deadline
-from app.models import MAX_DATE, MIN_DATE, ActivityLog, Category, Project, Task
+from app.models import (
+    MAX_DATE,
+    MIN_DATE,
+    ActivityLog,
+    Category,
+    Priority,
+    Project,
+    Task,
+    User,
+)
 
 
 def _check_range(value: date | None) -> date | None:
@@ -50,6 +60,7 @@ class ProjectCreate(BaseModel):
     actual_date: ActualDate = None
     projected_start_date: OptDate = None
     deadline_note: ShortText = ""
+    priority: Priority | None = None
     pic_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
@@ -66,7 +77,8 @@ NON_NULLABLE_PATCH_FIELDS = (
 
 
 class ProjectPatch(BaseModel):
-    """Fields that are omitted stay unchanged; date fields may be set to null (= TBD)."""
+    """Fields that are omitted stay unchanged; date fields may be set to null (= TBD) and
+    priority to null (= no priority)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -82,6 +94,7 @@ class ProjectPatch(BaseModel):
     actual_date: ActualDate = None
     projected_start_date: OptDate = None
     deadline_note: ShortText | None = None
+    priority: Priority | None = None
     pic_ids: list[uuid.UUID] | None = None
 
     @model_validator(mode="after")
@@ -108,6 +121,20 @@ class StageOut(BaseModel):
     sort_order: int
 
 
+class ActorRef(BaseModel):
+    """The user behind a change or a creation; `name` is the linked person's name."""
+
+    id: uuid.UUID
+    username: str
+    name: str
+
+    @classmethod
+    def of(cls, user: User | None) -> "ActorRef | None":
+        if user is None:
+            return None
+        return cls(id=user.id, username=user.username, name=user.person.name)
+
+
 class ProjectOut(BaseModel):
     id: uuid.UUID
     name: str
@@ -122,7 +149,9 @@ class ProjectOut(BaseModel):
     actual_date: date | None
     projected_start_date: date | None
     deadline_note: str
+    priority: Priority | None
     pics: list[PersonRef]
+    created_by: ActorRef | None
     version: int
     deleted_at: datetime | None
     created_at: datetime
@@ -161,7 +190,9 @@ class ProjectOut(BaseModel):
             actual_date=p.actual_date,
             projected_start_date=p.projected_start_date,
             deadline_note=p.deadline_note,
+            priority=p.priority,
             pics=[PersonRef.model_validate(x) for x in p.pics],
+            created_by=ActorRef.of(p.created_by),
             version=p.version,
             deleted_at=p.deleted_at,
             created_at=p.created_at,
@@ -195,6 +226,8 @@ class ActivityOut(BaseModel):
     old_value: str | None
     new_value: str | None
     changed_at: datetime
+    # None for entries written before logins existed.
+    actor: ActorRef | None = None
 
     @classmethod
     def from_model(cls, a: ActivityLog) -> "ActivityOut":
@@ -203,6 +236,7 @@ class ActivityOut(BaseModel):
             project_id=a.project_id,
             task_id=a.task_id,
             task_name=a.task.name if a.task is not None else None,
+            actor=ActorRef.of(a.actor),
             field=a.field,
             old_value=a.old_value,
             new_value=a.new_value,
@@ -222,6 +256,7 @@ class TaskCreate(BaseModel):
     plan_date: OptDate = None
     adjusted_plan_date: OptDate = None
     actual_date: ActualDate = None
+    priority: Priority | None = None
     pic_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
@@ -240,6 +275,7 @@ class TaskPatch(BaseModel):
     plan_date: OptDate = None
     adjusted_plan_date: OptDate = None
     actual_date: ActualDate = None
+    priority: Priority | None = None
     pic_ids: list[uuid.UUID] | None = None
 
     @model_validator(mode="after")
@@ -262,7 +298,9 @@ class TaskOut(BaseModel):
     plan_date: date | None
     adjusted_plan_date: date | None
     actual_date: date | None
+    priority: Priority | None
     pics: list[PersonRef]
+    created_by: ActorRef | None
     version: int
     deleted_at: datetime | None
     created_at: datetime
@@ -284,7 +322,9 @@ class TaskOut(BaseModel):
             plan_date=t.plan_date,
             adjusted_plan_date=t.adjusted_plan_date,
             actual_date=t.actual_date,
+            priority=t.priority,
             pics=[PersonRef.model_validate(x) for x in t.pics],
+            created_by=ActorRef.of(t.created_by),
             version=t.version,
             deleted_at=t.deleted_at,
             created_at=t.created_at,
@@ -400,4 +440,95 @@ class ReorderRequest(BaseModel):
     def _one_anchor(self) -> "ReorderRequest":
         if self.before_id is not None and self.after_id is not None:
             raise ValueError("send either before_id or after_id, not both")
+        return self
+
+
+USERNAME_PATTERN = r"^[a-z0-9._-]+$"
+PASSWORD_MIN = 8
+PASSWORD_MAX = 128
+
+
+def _normalise_username(value: object) -> object:
+    # Before the constraints: pydantic checks `pattern` before applying to_lower.
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+Username = Annotated[
+    str,
+    BeforeValidator(_normalise_username),
+    StringConstraints(min_length=2, max_length=50, pattern=USERNAME_PATTERN),
+]
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+    password: Annotated[str, StringConstraints(min_length=1, max_length=PASSWORD_MAX)]
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: Annotated[str, StringConstraints(min_length=1, max_length=PASSWORD_MAX)]
+    new_password: Annotated[
+        str, StringConstraints(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+    ]
+
+
+class UserOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    person: PersonRef
+    is_admin: bool
+    must_change_password: bool
+
+    @classmethod
+    def from_model(cls, u: User) -> "UserOut":
+        return cls(
+            id=u.id,
+            username=u.username,
+            person=PersonRef.model_validate(u.person),
+            is_admin=u.is_admin,
+            must_change_password=u.must_change_password,
+        )
+
+
+class UserAdminOut(UserOut):
+    is_active: bool
+    created_at: datetime
+    last_login_at: datetime | None
+    password_changed_at: datetime | None
+
+    @classmethod
+    def from_model(cls, u: User) -> "UserAdminOut":
+        return cls(
+            **UserOut.from_model(u).model_dump(),
+            is_active=u.is_active,
+            created_at=u.created_at,
+            last_login_at=u.last_login_at,
+            password_changed_at=u.password_changed_at,
+        )
+
+
+class UserCreate(BaseModel):
+    """The starting password is the username; it must be changed at the first login."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    username: Username
+    person_name: PersonName
+
+
+class UserPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_admin: bool | None = None
+    is_active: bool | None = None
+
+    @model_validator(mode="after")
+    def _no_null(self) -> "UserPatch":
+        for field in ("is_admin", "is_active"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
         return self

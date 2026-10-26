@@ -1,5 +1,8 @@
 import os
+import uuid
 from collections.abc import Iterator
+from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -18,8 +21,15 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from alembic import command  # noqa: E402
+from app.auth import COOKIE_NAME, hash_password, hash_token  # noqa: E402
+from app.clock import now_utc  # noqa: E402
 from app.db import get_engine  # noqa: E402
 from app.main import app  # noqa: E402
+
+CSRF = {"X-Requested-With": "fetch"}
+TEST_PASSWORD = "tester-password"
+# Hashed once per run: argon2 is deliberately slow.
+_TEST_HASH = hash_password(TEST_PASSWORD)
 
 
 def _ensure_database() -> None:
@@ -45,15 +55,87 @@ def _clean() -> None:
     with get_engine().begin() as conn:
         conn.execute(
             sa.text(
-                "TRUNCATE activity_logs, project_pics, projects, persons RESTART IDENTITY CASCADE"
+                "TRUNCATE activity_logs, project_pics, projects, sessions, users, persons"
+                " RESTART IDENTITY CASCADE"
             )
         )
         conn.execute(sa.text("DELETE FROM stages WHERE sort_order > 10"))
 
 
+@dataclass
+class Account:
+    id: uuid.UUID
+    person_id: uuid.UUID
+    username: str
+    token: str
+
+
+def make_user(
+    username: str,
+    *,
+    is_admin: bool = True,
+    must_change_password: bool = False,
+    is_active: bool = True,
+    with_session: bool = True,
+) -> Account:
+    """Inserts a person + account (password TEST_PASSWORD) and, optionally, a live session,
+    directly in the database so tests do not pay for a login each time."""
+    user_id, person_id = uuid.uuid4(), uuid.uuid4()
+    token = f"token-{user_id.hex}"
+    now = now_utc()
+    with get_engine().begin() as conn:
+        conn.execute(
+            sa.text("INSERT INTO persons (id, name) VALUES (:id, :name)"),
+            {"id": person_id, "name": username.capitalize()},
+        )
+        conn.execute(
+            sa.text(
+                "INSERT INTO users (id, username, person_id, password_hash, is_admin, is_active,"
+                " must_change_password) VALUES (:id, :u, :p, :h, :a, :act, :m)"
+            ),
+            {
+                "id": user_id,
+                "u": username,
+                "p": person_id,
+                "h": _TEST_HASH,
+                "a": is_admin,
+                "act": is_active,
+                "m": must_change_password,
+            },
+        )
+        if with_session:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at,"
+                    " expires_at) VALUES (:t, :u, :n, :n, :e)"
+                ),
+                {"t": hash_token(token), "u": user_id, "n": now, "e": now + timedelta(days=30)},
+            )
+    return Account(user_id, person_id, username, token)
+
+
+def client_for(user: Account | None) -> TestClient:
+    c = TestClient(app, raise_server_exceptions=False, headers=CSRF)
+    if user is not None:
+        c.cookies.set(COOKIE_NAME, user.token)
+    return c
+
+
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    with TestClient(app, raise_server_exceptions=False) as c:
+def me() -> Account:
+    """The logged-in admin every `client` request runs as."""
+    return make_user("tester")
+
+
+@pytest.fixture
+def client(me: Account) -> Iterator[TestClient]:
+    with client_for(me) as c:
+        yield c
+
+
+@pytest.fixture
+def anon_client() -> Iterator[TestClient]:
+    with client_for(None) as c:
         yield c
 
 

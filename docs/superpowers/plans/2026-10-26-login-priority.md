@@ -114,8 +114,8 @@ def require_admin(user=Depends(current_user)) -> User:
 
 - [ ] `routers/users.py` (`require_admin`): list, create (`username`, `person_name`; links an
   existing Person without account, else creates one; 409 `duplicate_username`,
-  409 `person_has_account`), PATCH `is_admin` / `is_active` (guards: not self, not the last
-  active admin → 422 `last_admin` / `self_change`), reset-password (password = username,
+  409 `person_has_account`), PATCH `is_admin` / `is_active` (guard: not on oneself →
+  422 `self_change`; this alone keeps one active admin), reset-password (password = username,
   must change, sessions deleted). Deactivation deletes sessions.
 - [ ] persons delete: 409 `person_has_account` when a user is linked.
 - [ ] `test_users.py`: each endpoint, each guard, non-admin 403, revocation.

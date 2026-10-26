@@ -25,8 +25,8 @@ def test_seed_is_idempotent() -> None:
         after_first = _counts(session)
         second = seed(session)
         after_second = _counts(session)
-    assert first == {"people": 5, "projects": len(PROJECTS)}
-    assert second == {"people": 0, "projects": 0}
+    assert first == {"people": 5, "users": 5, "projects": len(PROJECTS)}
+    assert second == {"people": 0, "users": 0, "projects": 0}
     assert after_first == after_second == (10, 5, 16, 16)
 
 

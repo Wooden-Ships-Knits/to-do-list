@@ -7,7 +7,7 @@ from fastapi import Query, Request
 
 from app.deadline import DeadlineStatus
 from app.errors import AppError
-from app.models import Category
+from app.models import Category, Priority
 from app.queries import DATE_FIELDS, DateRange, ProjectFilters, SortBy, SortDir
 
 
@@ -16,7 +16,7 @@ def _merged(request: Request, name: str, declared: list[str]) -> list[str]:
     return [*declared, *request.query_params.getlist(f"{name}[]")]
 
 
-def _enum_list[E: Category | DeadlineStatus](
+def _enum_list[E: Category | DeadlineStatus | Priority](
     values: list[str], enum: type[E], name: str
 ) -> list[E]:
     out: list[E] = []
@@ -34,6 +34,7 @@ def project_filters(
     stage: list[int] = Query(default=[]),
     pic: list[str] = Query(default=[]),
     deadline_status: list[str] = Query(default=[]),
+    priority: list[str] = Query(default=[]),
     search: str | None = Query(default=None, max_length=200),
     name: str | None = Query(default=None, max_length=200),
     description: str | None = Query(default=None, max_length=200),
@@ -73,6 +74,10 @@ def project_filters(
         except ValueError as exc:
             raise AppError(422, "validation_error", f"stage: invalid value '{value}'") from exc
 
+    priority_values = _merged(request, "priority", priority)
+    priority_none = "none" in priority_values
+    priorities = _enum_list([v for v in priority_values if v != "none"], Priority, "priority")
+
     local = locals()
     dates = {
         f: DateRange(local[f"{f}_from"], local[f"{f}_to"], local[f"{f}_tbd"]) for f in DATE_FIELDS
@@ -85,6 +90,8 @@ def project_filters(
         statuses=_enum_list(
             _merged(request, "deadline_status", deadline_status), DeadlineStatus, "deadline_status"
         ),
+        priorities=priorities,
+        priority_none=priority_none,
         search=search.strip() if search and search.strip() else None,
         name=name.strip() if name and name.strip() else None,
         description=description.strip() if description and description.strip() else None,

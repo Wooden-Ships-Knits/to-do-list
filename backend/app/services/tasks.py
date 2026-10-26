@@ -23,6 +23,7 @@ from app.services import projects as project_svc
 from app.services.projects import (
     DONE_STAGE,
     POSITION_GAP,
+    actor_id,
     get_persons,
     get_stage,
     log_change,
@@ -31,7 +32,7 @@ from app.services.projects import (
 )
 
 DEFAULT_STAGE = "Not Started"
-SIMPLE_FIELDS = ("name", "notes", "plan_date", "adjusted_plan_date", "actual_date")
+SIMPLE_FIELDS = ("name", "notes", "plan_date", "adjusted_plan_date", "actual_date", "priority")
 
 
 def to_out(task: Task) -> TaskOut:
@@ -179,6 +180,8 @@ def create_task(session: Session, project_id: uuid.UUID, payload: TaskCreate) ->
         plan_date=payload.plan_date,
         adjusted_plan_date=payload.adjusted_plan_date,
         actual_date=actual,
+        priority=payload.priority,
+        created_by_id=actor_id(session),
         position=next_position(session, project.id, payload.parent_id),
     )
     task.version = 1

@@ -30,6 +30,8 @@ services:
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Makassar}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8090}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_DAYS: ${SESSION_DAYS:-30}
     depends_on:
       db:
         condition: service_healthy

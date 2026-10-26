@@ -75,8 +75,8 @@ the username does not exist yet. A second run never resets a password or flags.
 - Admin: `GET /users`, `POST /users {username, person_name}` (creates or links the Person; starting
   password = username, must change), `PATCH /users/{id} {is_admin?, is_active?}`,
   `POST /users/{id}/reset-password` (password = username, must change, sessions revoked).
-  Guards: an admin cannot deactivate or demote themselves; the last active admin cannot be
-  demoted or deactivated (422 `last_admin`). Username taken → 409 `duplicate_username`.
+  Guard: an admin cannot deactivate, demote or reset themselves (422 `self_change`). Since the
+  acting admin always stays an active admin, at least one active admin always remains. Username taken → 409 `duplicate_username`.
 - All existing endpoints now depend on `current_user`.
 - `ActivityOut` adds `actor: {id, username, name} | null`. `ProjectOut` and `TaskOut` add
   `created_by: {id, username, name} | null` and `priority: "urgent" | "high" | "normal" | "low" | null`.
@@ -106,8 +106,8 @@ the username does not exist yet. A second run never resets a password or flags.
   avatar + name, "Change password", "Users" (admins), "Log out".
 - Users page (`/users`, admin only, non-admins get a 403 state): table (Username, Person, Admin,
   Active, Last login) on desktop/tablet, cards on mobile. Actions: Add user (dialog: username +
-  name), Reset password (confirm), Activate/Deactivate, Make admin/Remove admin. Self-guards shown
-  as disabled actions with a reason.
+  name), Reset password (confirm), Activate/Deactivate, Make admin/Remove admin. On one's own row
+  these are disabled with a reason.
 
 **Attribution**
 - Activity history lines: avatar + "Denan · changed Stage from Testing to Live · 2h ago"; NULL actor

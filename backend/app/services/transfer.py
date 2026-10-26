@@ -19,7 +19,7 @@ from app.clock import today
 from app.deadline import DeadlineStatus
 from app.errors import AppError
 from app.fmt import format_date, parse_date
-from app.models import Category, Person, Project, Stage
+from app.models import Category, Person, Priority, Project, Stage
 from app.schemas import ImportFieldError, ImportReport, ImportRow, ProjectCreate
 from app.services.projects import insert_project
 
@@ -43,6 +43,7 @@ HEADER_ALIASES = {
     "description": "description",
     "ongoing issue": "ongoing_issue",
     "stage": "stage",
+    "priority": "priority",
     "status notes": "status_notes",
     "plan date": "plan_date",
     "adjusted plan date": "adjusted_plan_date",
@@ -59,6 +60,7 @@ EXPORT_COLUMNS = [
     "Description",
     "Ongoing Issue",
     "Stage",
+    "Priority",
     "Status Notes",
     "Plan Date",
     "Adjusted Plan Date",
@@ -110,6 +112,7 @@ def _row_values(p: Project, today_: date, counts: SubtaskCounts) -> list[str | d
         p.description,
         p.ongoing_issue,
         p.stage.name,
+        p.priority.value.capitalize() if p.priority else "",
         p.status_notes,
         p.plan_date,
         p.adjusted_plan_date,
@@ -162,7 +165,7 @@ def export_xlsx(projects: Sequence[Project], counts: SubtaskCounts) -> bytes:
                 cell.number_format = "ddd, mmm dd, yy"
                 if cell.value is None:
                     cell.value = "TBD"
-    widths = [12, 36, 50, 40, 18, 50, 18, 20, 18, 18, 24, 22, 20, 16, 14]
+    widths = [12, 36, 50, 40, 18, 10, 50, 18, 20, 18, 18, 24, 22, 20, 16, 14]
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     out = io.BytesIO()
@@ -277,6 +280,17 @@ def _validate(
         else:
             payload["stage_id"] = stage.id
 
+        priority_text = raw_row.get("priority", "").lower()
+        if priority_text in {p.value for p in Priority}:
+            payload["priority"] = priority_text
+        elif priority_text:
+            errors.append(
+                ImportFieldError(
+                    field="priority",
+                    message="Priority must be urgent, high, normal, low or empty",
+                )
+            )
+
         for name in DATE_FIELDS:
             try:
                 payload[name] = parse_date(raw_row.get(name, ""))
@@ -337,6 +351,7 @@ def _validate(
                     "name": raw_row.get("name", ""),
                     "category": raw_row.get("category", ""),
                     "stage": stage_name,
+                    "priority": payload.get("priority"),
                     **{f: raw_row.get(f, "") or None for f in DATE_FIELDS},
                     "pics": [p.name for p in persons],
                 },

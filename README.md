@@ -56,8 +56,18 @@ make restore-db DUMP=db-dump/todo-2026-10-06.sql   # loads the dump, then starts
 ```
 
 `make dump-db DUMP=db-dump/my-backup.sql` makes a new dump. Restoring replaces the data that is
-there (the dump drops and recreates the tables). The dump contains no passwords; database
-credentials only live in `.env` (not committed, see `.env.example`).
+there (the dump drops and recreates the tables). A dump contains the login accounts with their
+argon2 password hashes (never plain passwords) and the active sessions, so treat it as private.
+Database credentials only live in `.env` (not committed, see `.env.example`).
+
+## Logins
+
+Every page and API call needs a login. `make seed` creates the accounts `denan`, `luthfi`,
+`dzawil`, `prada` and `andika` (all admins); the first password is the username and must be
+changed at the first login. Admins add people, reset passwords (back to the username) and
+deactivate accounts on the Users screen. Sessions are server-side (HttpOnly cookie, ended after
+`SESSION_DAYS` days without use); set `COOKIE_SECURE=true` when the app is served over HTTPS.
+Every activity entry records who made the change; entries from before logins show "Unknown".
 
 ## Layout
 
@@ -109,6 +119,6 @@ Everything comes from environment variables (see `.env.example`): database crede
 - **Column resize** is a mouse/keyboard feature. The 8px drag handle is hidden on touch devices
   (it cannot meet the 44px touch-target rule); touch users still have show/hide and sort.
 - **ESLint 9** (not 10) because `eslint-plugin-jsx-a11y` does not support 10 yet.
-- There is no login: the spec does not ask for one. There is no UI for managing people or stages
-  (the API supports it); people are seeded.
+- There is no UI for managing stages (the API supports it). People are seeded or added together
+  with a login on the Users screen.
 - Stage and PIC filters use ids in the URL.

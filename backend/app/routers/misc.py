@@ -19,12 +19,14 @@ from app.services import transfer
 from app.services.summary import build_summary
 
 router = APIRouter()
+# Public: container healthchecks call it without a login.
+health_router = APIRouter()
 SessionDep = Annotated[Session, Depends(get_session)]
 FiltersDep = Annotated[ProjectFilters, Depends(project_filters)]
 SortDep = Annotated[tuple[SortBy, SortDir], Depends(sorting)]
 
 
-@router.get("/health", tags=["ops"])
+@health_router.get("/health", tags=["ops"])
 def health(session: SessionDep) -> Response:
     try:
         session.execute(sa.text("SELECT 1"))

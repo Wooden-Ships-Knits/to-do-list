@@ -7,8 +7,9 @@ from datetime import date
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.auth import hash_password
 from app.db import session_factory
-from app.models import ActivityLog, Category, Person, Project, Stage
+from app.models import ActivityLog, Category, Person, Project, Stage, User
 from app.services.projects import next_position
 
 log = logging.getLogger("app.seed")
@@ -26,6 +27,9 @@ STAGES = [
     "Done",
 ]
 PEOPLE = ["Denan", "Luthfi", "Prada", "Dzawil", "Andika"]
+# Every team member gets an admin login "<name in lower case>" whose first password is the
+# username; it has to be changed at the first login.
+ACCOUNTS = PEOPLE
 
 
 @dataclass
@@ -194,6 +198,8 @@ def seed(session: Session) -> dict[str, int]:
             created_people += 1
     session.flush()
 
+    created_users = seed_users(session, people)
+
     existing_names = {
         n.lower()
         for n in session.scalars(sa.select(Project.name).where(Project.deleted_at.is_(None)))
@@ -221,14 +227,45 @@ def seed(session: Session) -> dict[str, int]:
         session.add(ActivityLog(project_id=project.id, field="project", new_value="created"))
         created_projects += 1
     session.commit()
-    return {"people": created_people, "projects": created_projects}
+    return {"people": created_people, "users": created_users, "projects": created_projects}
+
+
+def seed_users(session: Session, people: dict[str, Person]) -> int:
+    """Creates the missing accounts only: an existing account (and its password) is never
+    touched, so running the seed again is safe."""
+    taken = {u.lower() for u in session.scalars(sa.select(User.username))}
+    linked = set(session.scalars(sa.select(User.person_id)))
+    created = 0
+    for name in ACCOUNTS:
+        username = name.lower()
+        person = people[username]
+        if username in taken or person.id in linked:
+            continue
+        session.add(
+            User(
+                username=username,
+                person_id=person.id,
+                password_hash=hash_password(username),
+                is_admin=True,
+                is_active=True,
+                must_change_password=True,
+            )
+        )
+        created += 1
+    session.flush()
+    return created
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     with session_factory()() as session:
         result = seed(session)
-    log.info("Seed complete: %s new people, %s new projects", result["people"], result["projects"])
+    log.info(
+        "Seed complete: %s new people, %s new users, %s new projects",
+        result["people"],
+        result["users"],
+        result["projects"],
+    )
 
 
 if __name__ == "__main__":

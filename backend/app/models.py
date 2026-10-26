@@ -19,6 +19,19 @@ class Category(enum.StrEnum):
     maintenance = "maintenance"
 
 
+class Priority(enum.StrEnum):
+    """ClickUp-style priority. NULL in the database means "no priority"."""
+
+    urgent = "urgent"
+    high = "high"
+    normal = "normal"
+    low = "low"
+
+
+PRIORITY_TYPE = sa.Enum(
+    Priority, name="priority_level", values_callable=lambda e: [m.value for m in e]
+)
+
 DATE_COLUMNS = ("plan_date", "adjusted_plan_date", "actual_date", "projected_start_date")
 
 
@@ -66,6 +79,54 @@ class Person(Base):
     )
 
 
+class User(Base):
+    """A login account, linked to exactly one Person (name and avatar come from there)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)
+    username: Mapped[str] = mapped_column(sa.String(50), nullable=False)
+    person_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("persons.id", ondelete="RESTRICT"), nullable=False, unique=True
+    )
+    password_hash: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.false())
+    is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.true())
+    must_change_password: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, server_default=sa.true()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    password_changed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    last_login_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+    person: Mapped[Person] = relationship(lazy="joined")
+
+    __table_args__ = (
+        sa.CheckConstraint("username ~ '^[a-z0-9._-]+$'", name="ck_users_username_format"),
+        sa.Index("uq_users_username_lower", sa.text("lower(username)"), unique=True),
+    )
+
+
+class UserSession(Base):
+    """A login session. Only the SHA-256 of the cookie token is stored."""
+
+    __tablename__ = "sessions"
+
+    token_hash: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+
+    user: Mapped[User] = relationship(lazy="joined")
+
+    __table_args__ = (sa.Index("ix_sessions_user_id", "user_id"),)
+
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -88,6 +149,10 @@ class Project(Base):
     actual_date: Mapped[date | None] = mapped_column(sa.Date)
     projected_start_date: Mapped[date | None] = mapped_column(sa.Date)
     deadline_note: Mapped[str] = mapped_column(sa.String(500), nullable=False, server_default="")
+    priority: Mapped[Priority | None] = mapped_column(PRIORITY_TYPE)
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="SET NULL")
+    )
     # Manual order inside a category (gaps of 1000; rebalanced when a gap runs out).
     position: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
@@ -106,6 +171,7 @@ class Project(Base):
     pics: Mapped[list[Person]] = relationship(
         secondary=project_pics, lazy="selectin", order_by=Person.name
     )
+    created_by: Mapped[User | None] = relationship(lazy="joined")
 
     __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     __table_args__ = (
@@ -124,6 +190,7 @@ class Project(Base):
         sa.Index("ix_projects_plan_date", "plan_date"),
         sa.Index("ix_projects_adjusted_plan_date", "adjusted_plan_date"),
         sa.Index("ix_projects_deleted_at", "deleted_at"),
+        sa.Index("ix_projects_priority", "priority"),
     )
 
 
@@ -160,6 +227,10 @@ class Task(Base):
     plan_date: Mapped[date | None] = mapped_column(sa.Date)
     adjusted_plan_date: Mapped[date | None] = mapped_column(sa.Date)
     actual_date: Mapped[date | None] = mapped_column(sa.Date)
+    priority: Mapped[Priority | None] = mapped_column(PRIORITY_TYPE)
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="SET NULL")
+    )
     # Manual order among siblings (same project and parent); gaps of 1000.
     position: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
@@ -178,6 +249,7 @@ class Task(Base):
     pics: Mapped[list[Person]] = relationship(
         secondary=task_pics, lazy="selectin", order_by=Person.name
     )
+    created_by: Mapped[User | None] = relationship(lazy="joined")
 
     __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     __table_args__ = (
@@ -205,6 +277,7 @@ class Task(Base):
         sa.Index("ix_tasks_stage_id", "stage_id"),
         sa.Index("ix_tasks_plan_date", "plan_date"),
         sa.Index("ix_tasks_deleted_at", "deleted_at"),
+        sa.Index("ix_tasks_priority", "priority"),
     )
 
 
@@ -217,6 +290,10 @@ class ActivityLog(Base):
     )
     # Set when the entry describes a subtask change (shown in the project's history).
     task_id: Mapped[uuid.UUID | None] = mapped_column(sa.ForeignKey("tasks.id", ondelete="CASCADE"))
+    # Who made the change; NULL for entries written before logins existed (and by the seed).
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="SET NULL")
+    )
     field: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     old_value: Mapped[str | None] = mapped_column(sa.Text)
     new_value: Mapped[str | None] = mapped_column(sa.Text)
@@ -225,8 +302,10 @@ class ActivityLog(Base):
     )
 
     task: Mapped[Task | None] = relationship(lazy="joined")
+    actor: Mapped[User | None] = relationship(lazy="joined")
 
     __table_args__ = (
         sa.Index("ix_activity_logs_project_changed", "project_id", "changed_at"),
         sa.Index("ix_activity_logs_task_id", "task_id"),
+        sa.Index("ix_activity_logs_actor_id", "actor_id"),
     )
