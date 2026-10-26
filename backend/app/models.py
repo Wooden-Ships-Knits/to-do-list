@@ -309,3 +309,42 @@ class ActivityLog(Base):
         sa.Index("ix_activity_logs_task_id", "task_id"),
         sa.Index("ix_activity_logs_actor_id", "actor_id"),
     )
+
+
+class Note(Base):
+    """A private Markdown note. Only its owner can see it (every query filters on owner_id)."""
+
+    __tablename__ = "notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(sa.String(200), nullable=False)
+    body: Mapped[str] = mapped_column(sa.Text, nullable=False, server_default="")
+    pinned: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.false())
+    version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+    )
+
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __table_args__ = (
+        sa.CheckConstraint("char_length(btrim(title)) > 0", name="ck_notes_title_not_blank"),
+        sa.CheckConstraint("version >= 1", name="ck_notes_version_positive"),
+        sa.Index(
+            "uq_notes_owner_title_active",
+            "owner_id",
+            sa.text("lower(title)"),
+            unique=True,
+            postgresql_where=sa.text("deleted_at IS NULL"),
+        ),
+        sa.Index("ix_notes_owner_updated", "owner_id", "updated_at"),
+    )

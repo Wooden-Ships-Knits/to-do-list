@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     AfterValidator,
@@ -532,3 +532,86 @@ class UserPatch(BaseModel):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
+
+
+# --- private notes ------------------------------------------------------------------------------
+
+NOTE_TITLE_PATTERN = r"^[^\[\]|\n\r]+$"  # these characters would break [[links]]
+NoteTitle = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=200, pattern=NOTE_TITLE_PATTERN
+    ),
+]
+NoteBody = Annotated[str, StringConstraints(max_length=200_000)]
+LinkKind = Literal["note", "project", "task", "unresolved"]
+
+
+class NoteCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: NoteTitle
+    body: NoteBody = ""
+
+
+class NotePatch(BaseModel):
+    """Omitted fields stay unchanged."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: int
+    title: NoteTitle | None = None
+    body: NoteBody | None = None
+    pinned: bool | None = None
+
+    @model_validator(mode="after")
+    def _no_null(self) -> "NotePatch":
+        for field in ("title", "body", "pinned"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
+
+
+class NoteLinkOut(BaseModel):
+    target: str
+    label: str | None
+    kind: LinkKind
+    note_id: uuid.UUID | None = None
+    project_id: uuid.UUID | None = None
+    task_id: uuid.UUID | None = None
+
+
+class BacklinkOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    snippet: str
+
+
+class NoteListItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    pinned: bool
+    updated_at: datetime
+    snippet: str
+
+
+class NoteOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    body: str
+    pinned: bool
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
+    links: list[NoteLinkOut]
+    backlinks: list[BacklinkOut]
+
+
+class LinkTarget(BaseModel):
+    """A suggestion for the `[[` autocomplete; `insert` goes between the brackets."""
+
+    kind: Literal["note", "project", "task"]
+    label: str
+    insert: str
+    id: uuid.UUID

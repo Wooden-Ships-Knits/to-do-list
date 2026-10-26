@@ -10,7 +10,7 @@ from app.auth import current_user
 from app.config import get_settings
 from app.errors import error_response, register_error_handlers
 from app.logging_config import configure_logging
-from app.routers import auth, misc, persons, projects, tasks, users
+from app.routers import auth, misc, notes, persons, projects, tasks, users
 
 log = logging.getLogger("app.request")
 
@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=api)  # each route picks its own guard
     app.include_router(users.router, prefix=api)  # admins only (per route)
     logged_in = [Depends(current_user)]
-    for router in (misc.router, projects.router, persons.router, tasks.router):
+    for router in (misc.router, projects.router, persons.router, tasks.router, notes.router):
         app.include_router(router, prefix=api, dependencies=logged_in)
     return app
 
