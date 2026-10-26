@@ -46,8 +46,9 @@ the username does not exist yet. A second run never resets a password or flags.
   (hash a dummy when the username is unknown).
 - Login creates a 32-byte random token (`secrets.token_urlsafe`), stores only its SHA-256 hash.
   Cookie `todo_session`: HttpOnly, `SameSite=Lax`, `Path=/`, `Secure` when `COOKIE_SECURE=true`,
-  max-age 30 days. Expiry slides: `expires_at` is pushed to now + 30 days when the session is used
-  and `last_seen_at` is older than 1 hour (avoids a write per request).
+  max-age 400 days (the browser cap); the server-side `expires_at` is authoritative and slides:
+  it is pushed to now + 30 days when the session is used and `last_seen_at` is older than 1 hour
+  (avoids a write per request).
 - Logout deletes the session row and clears the cookie. Deactivating a user, resetting their
   password or changing one's own password deletes their other sessions (own current one is kept on
   self-change).
@@ -78,13 +79,13 @@ the username does not exist yet. A second run never resets a password or flags.
   demoted or deactivated (422 `last_admin`). Username taken → 409 `duplicate_username`.
 - All existing endpoints now depend on `current_user`.
 - `ActivityOut` adds `actor: {id, username, name} | null`. `ProjectOut` and `TaskOut` add
-  `created_by: {id, name} | null` and `priority: "urgent" | "high" | "normal" | "low" | null`.
+  `created_by: {id, username, name} | null` and `priority: "urgent" | "high" | "normal" | "low" | null`.
 
 **Priority**
 - Create and PATCH accept `priority` (null clears). Change is logged (`field = "priority"`).
 - List filter `priority[]` with values `urgent|high|normal|low|none`; also used by export.
 - Sort `sort_by=priority`: asc = Urgent, High, Normal, Low, none; desc = reverse with none still
-  last. Ties fall back to manual order.
+  last. Ties fall back to the name (same as every other sort).
 - CSV import/export: column `Priority` (blank = none; case-insensitive level names; bad value is a
   per-row error).
 - Summary is unchanged.
