@@ -578,10 +578,7 @@ test.describe('grouping', () => {
     await expect(header('Pending, 1 project')).toBeVisible();
     await expect(header('Maintenance, 1 project')).toBeVisible();
     await expect(page.locator('tr[data-group]')).toHaveCount(3);
-    await expect(page.getByRole('button', { name: 'Group by category' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(page.getByRole('button', { name: 'Group: Category' })).toBeVisible();
     await expect(app.rows()).toHaveCount(5);
 
     const current = header('Current, 3 projects');
@@ -592,17 +589,22 @@ test.describe('grouping', () => {
     await current.click();
     await expect(app.rows()).toHaveCount(5);
 
-    await page.getByRole('button', { name: 'Group by category' }).click();
+    const group = async (choice: string): Promise<void> => {
+      await page.getByRole('button', { name: /^Group: / }).click();
+      await page.getByRole('menuitemradio', { name: choice }).click();
+    };
+    await group('None');
     await expect(page).toHaveURL(/group=0/);
     await expect(page.locator('tr[data-group]')).toHaveCount(0);
     await expect(app.rows()).toHaveCount(5);
     await page.reload();
     await app.ready();
-    await expect(page.getByRole('button', { name: 'Group by category' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
-    await page.getByRole('button', { name: 'Group by category' }).click();
+    await expect(page.getByRole('button', { name: 'Group: None' })).toBeVisible();
+    await group('Stage');
+    await expect(page).toHaveURL(/group=stage/);
+    await expect(page.locator('tr[data-group^="stage:"]').first()).toBeVisible();
+    await expect(page.getByTestId('order-note')).toContainText('Grouped by stage');
+    await group('Category');
     await expect(page).not.toHaveURL(/group=/);
     await expect(page.locator('tr[data-group]')).toHaveCount(3);
   });

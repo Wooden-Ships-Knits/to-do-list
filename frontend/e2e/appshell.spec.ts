@@ -160,7 +160,8 @@ test.describe('sidebar', () => {
     await item.click();
     await expect(page).toHaveURL(/pic=/);
     await expect.poll(() => app.hasRow(app.name('Denan only'))).toBe(true);
-    expect(await app.names()).not.toContain(app.name('Nobody'));
+    // the list refreshes after the URL changes: wait for it rather than read it once
+    await expect.poll(() => app.names()).not.toContain(app.name('Nobody'));
   });
 });
 
@@ -237,7 +238,11 @@ test.describe('list view grouped by category', () => {
       ['Maintenance', 'maintenance'],
     ] as const) {
       const name = app.name(`Quick ${label}`);
-      await page.getByRole('button', { name: `New project in ${label}` }).click();
+      // the "Add project" row at the bottom of the group (the "+" in the header opens it too)
+      await page
+        .locator(`tr[data-add-row="${category}"]`)
+        .getByRole('button', { name: `New project in ${label}` })
+        .click();
       const input = page.getByLabel(`Name of the new ${label} project`);
       await expect(input).toBeFocused();
       await input.fill(name);
@@ -261,8 +266,13 @@ test.describe('list view grouped by category', () => {
   }) => {
     const existing = await app.create('Taken');
     await app.goto();
-    await page.getByRole('button', { name: 'New project in Current' }).click();
+    // the "+" in the group header opens the same box as the bottom row
+    await page
+      .locator('tr[data-group="current"]')
+      .getByRole('button', { name: 'New project in Current' })
+      .click();
     const input = page.getByLabel('Name of the new Current project');
+    await expect(input).toBeFocused();
     await input.press('Enter');
     await expect(page.getByRole('alert').filter({ hasText: 'Enter a project name' })).toBeVisible();
     await input.fill(existing.name);
@@ -271,7 +281,11 @@ test.describe('list view grouped by category', () => {
     expect((await app.listByToken()).length).toBe(1);
     await input.press('Escape');
     await expect(input).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'New project in Current' })).toBeVisible();
+    await expect(
+      page
+        .locator('tr[data-add-row="current"]')
+        .getByRole('button', { name: 'New project in Current' }),
+    ).toBeVisible();
   });
 
   test('group headers show a caret, the coloured category pill and the count', async ({
@@ -282,8 +296,10 @@ test.describe('list view grouped by category', () => {
     await app.create('G2');
     await app.goto();
     const header = page.locator('tr[data-group="current"]');
-    await expect(header.getByRole('button', { name: 'Current, 2 projects' })).toBeVisible();
-    await expect(header.locator('svg')).toHaveCount(1); // the caret
+    const toggle = header.getByRole('button', { name: 'Current, 2 projects' });
+    await expect(toggle).toBeVisible();
+    await expect(toggle.locator('svg')).toHaveCount(1); // the caret
+    await expect(header.getByRole('button', { name: 'New project in Current' })).toBeVisible(); // "+"
     const pill = header.getByText('Current', { exact: true });
     expect(await pill.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(111, 207, 151)'); // #6FCF97
     expect(await pill.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(

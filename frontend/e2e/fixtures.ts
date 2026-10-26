@@ -2,6 +2,7 @@ import { expect, test as base } from '@playwright/test';
 import type { APIRequestContext, Locator, Page, TestInfo } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { ADMIN_STATE, CSRF } from './auth';
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
@@ -137,6 +138,29 @@ export class App {
     for (const p of await this.listByToken()) await this.request.delete(`/api/v1/projects/${p.id}`);
   }
 
+  /** A throw-away account (not an admin) for this test; its first password is its username.
+   *  Global teardown deactivates it. */
+  async newUser(label: string): Promise<{ id: string; username: string; name: string }> {
+    const username = `e2e-${this.token.toLowerCase()}-${label}`.slice(0, 50);
+    const name = this.name(`user ${label}`);
+    const res = await this.request.post('/api/v1/users', {
+      data: { username, person_name: name },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const body = (await res.json()) as { id: string };
+    return { id: body.id, username, name };
+  }
+
+  /** Opens the account menu at the bottom of the sidebar (in the drawer on phones). */
+  async openUserMenu(name: string): Promise<void> {
+    await this.openSidebar();
+    const scope =
+      this.layout === 'mobile'
+        ? this.page.getByTestId('sidebar-drawer')
+        : this.page.getByTestId('sidebar');
+    await scope.getByRole('button', { name: `Account: ${name}` }).click();
+  }
+
   /* ---------- navigation ---------- */
 
   /** Opens the dashboard. By default the list is narrowed to this test's projects. */
@@ -198,15 +222,10 @@ export class App {
     await this.page.getByLabel('Search projects').fill(text);
   }
 
-  /* ---------- filters (header popover on desktop, drawer / sheet elsewhere) ---------- */
+  /* ---------- filters (the Filters panel: side drawer, bottom sheet on phones) ---------- */
 
-  async openFilterFor(column: string): Promise<Locator> {
-    if (this.layout === 'desktop') {
-      await this.page
-        .getByRole('button', { name: new RegExp(`^Filter ${column}( \\(active\\))?$`) })
-        .click();
-      return this.page.getByRole('dialog', { name: `Filter ${column}` });
-    }
+  /** Column filters live in the Filters panel on every screen size (not in the headers). */
+  async openFilterFor(_column: string): Promise<Locator> {
     const panel = this.page.getByRole('dialog', { name: 'Filters' });
     if (!(await panel.isVisible())) await this.page.getByTestId('open-filters').click();
     await expect(panel).toBeVisible();
@@ -214,19 +233,13 @@ export class App {
   }
 
   async closeFilters(): Promise<void> {
-    if (this.layout === 'desktop') {
-      await this.page.keyboard.press('Escape');
-      await expect(this.page.getByRole('dialog', { name: /^Filter / })).toHaveCount(0);
-    } else {
-      await this.page.getByTestId('show-results').click();
-      await expect(this.page.getByRole('dialog', { name: 'Filters' })).toHaveCount(0);
-    }
+    await this.page.getByTestId('show-results').click();
+    await expect(this.page.getByRole('dialog', { name: 'Filters' })).toHaveCount(0);
   }
 
   async multiFilter(column: string, options: string[]): Promise<void> {
     const scope = await this.openFilterFor(column);
-    const group =
-      this.layout === 'desktop' ? scope : scope.getByRole('group', { name: column, exact: true });
+    const group = scope.getByRole('group', { name: column, exact: true });
     for (const option of options) await group.getByLabel(option, { exact: true }).check();
     await this.closeFilters();
   }
@@ -243,8 +256,7 @@ export class App {
     range: { from?: string; to?: string; tbd?: boolean },
   ): Promise<void> {
     const scope = await this.openFilterFor(label);
-    const group =
-      this.layout === 'desktop' ? scope : scope.getByRole('group', { name: label, exact: true });
+    const group = scope.getByRole('group', { name: label, exact: true });
     if (range.from) await group.getByLabel('From', { exact: true }).fill(range.from);
     if (range.to) await group.getByLabel('To', { exact: true }).fill(range.to);
     if (range.tbd) await group.getByLabel('Is TBD (no date)').check();
@@ -289,6 +301,53 @@ export class App {
     await this.page.screenshot({ path: join(dir, `${name}.png`) });
   }
 
+  /** The full "spreadsheet" columns (the view before the ClickUp-style list, plus Priority) and
+   *  the "#" column, for tests about those columns. Set before the first load; later changes in
+   *  the test (and reloads) keep the user's own settings. */
+  async spreadsheetColumns(): Promise<void> {
+    await this.page.addInitScript(() => {
+      const ids = [
+        'category',
+        'name',
+        'description',
+        'stage',
+        'priority',
+        'status_notes',
+        'projected_start_date',
+        'effective_deadline',
+        'plan_date',
+        'adjusted_plan_date',
+        'actual_date',
+        'pic',
+        'deadline_status',
+      ];
+      const tablet = [
+        'name',
+        'stage',
+        'priority',
+        'plan_date',
+        'adjusted_plan_date',
+        'actual_date',
+        'pic',
+        'deadline_status',
+      ];
+      for (const layout of ['desktop', 'tablet']) {
+        const key = `todo.columns.v3.${layout}`;
+        if (window.localStorage.getItem(key)) continue;
+        const visibility = Object.fromEntries(
+          ids.map((id) => [
+            id,
+            layout === 'desktop' ? id !== 'effective_deadline' : tablet.includes(id),
+          ]),
+        );
+        window.localStorage.setItem(
+          key,
+          JSON.stringify({ visibility, sizing: {}, showNumber: true }),
+        );
+      }
+    });
+  }
+
   /** Chooses the theme before the page loads (what a returning visitor has saved). */
   async setTheme(mode: 'dark' | 'light' | 'system'): Promise<void> {
     await this.page.addInitScript((m) => window.localStorage.setItem('todo.theme', m), mode);
@@ -308,12 +367,20 @@ export const test = base.extend<{ app: App; layout: Layout }>({
   layout: async ({ viewport }, use) => {
     await use(layoutFor(viewport?.width ?? 1440));
   },
-  app: async ({ page, request, layout }, use, testInfo) => {
+  // Test data is set up through the API as the admin, whatever session the page itself has
+  // (the login tests start logged out).
+  app: async ({ page, playwright, baseURL, layout }, use, testInfo) => {
+    const admin = await playwright.request.newContext({
+      baseURL,
+      storageState: ADMIN_STATE,
+      extraHTTPHeaders: CSRF,
+    });
     const token =
       `${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-3)}`.toUpperCase();
-    const app = new App(page, request, layout, token, testInfo);
+    const app = new App(page, admin, layout, token, testInfo);
     await use(app);
     await app.cleanup();
+    await admin.dispose();
   },
 });
 

@@ -148,6 +148,7 @@ test.describe('layout and rendering', () => {
   });
 
   test('tables show the date format everywhere', async ({ app, page }) => {
+    await app.spreadsheetColumns(); // the Adjusted Plan Date column is optional
     const today = await app.today();
     await app.create('Dated', { plan_date: today, adjusted_plan_date: '2027-01-15' });
     await app.goto();
@@ -230,7 +231,7 @@ test.describe('touch and mobile rules', () => {
       plan_date: '2026-09-01',
       adjusted_plan_date: '2027-02-02',
       pic_ids: [persons['Denan']!.id, persons['Prada']!.id],
-      description: 'Hidden until opened',
+      description: 'Shown under the name',
       status_notes: 'Notes hidden too',
     });
     await app.create('Card done', { actual_date: today, category: 'pending' });
@@ -243,7 +244,8 @@ test.describe('touch and mobile rules', () => {
     await expect(card).toContainText(display('2027-02-02'));
     await expect(card.getByText('adjusted', { exact: true })).toBeVisible();
     await expect(card).toContainText('Denan, Prada');
-    await expect(card).not.toContainText('Hidden until opened');
+    // the description shows under the name (2 lines); status notes wait for the sheet
+    await expect(card.getByTestId('card-description')).toContainText('Shown under the name');
     await expect(card).not.toContainText('Notes hidden too');
     // the four schedule fields as a 2x2 grid: empty = yellow, filled = grey
     const bgOf = (field: string) =>
@@ -317,7 +319,7 @@ test.describe('touch and mobile rules', () => {
 });
 
 test.describe('tablet specifics', () => {
-  test('priority columns only by default, sticky project column, scroll inside container', async ({
+  test('ClickUp-style columns by default, sticky project column, scroll inside container', async ({
     app,
     page,
     layout,
@@ -334,8 +336,8 @@ test.describe('tablet specifics', () => {
     expect(headers).toEqual([
       'name',
       'stage',
+      'priority',
       'plan_date',
-      'adjusted_plan_date',
       'actual_date',
       'pic',
       'deadline_status',
@@ -368,7 +370,7 @@ test.describe('tablet specifics', () => {
     await app.shot('table-all-columns');
   });
 
-  test('side panel is a drawer at 80% width and filters open in a drawer', async ({
+  test('the detail pop-up fills the screen with a 16px margin; filters open in a drawer', async ({
     app,
     page,
     viewport,
@@ -378,12 +380,10 @@ test.describe('tablet specifics', () => {
     await seedThree(app);
     await app.goto();
     const detail = await app.openProject(app.name('Alpha overdue'));
-    const box = await detail.boundingBox();
-    expect(box!.width / viewport!.width).toBeGreaterThan(0.78);
-    expect(box!.width / viewport!.width).toBeLessThan(0.82);
-    await expect(
-      page.locator('[data-variant="drawer"] [aria-hidden="true"]').first(),
-    ).toBeAttached(); // backdrop
+    await page.waitForTimeout(300); // opening animation
+    const box = (await detail.boundingBox())!;
+    expect(Math.round(box.width)).toBe(viewport!.width - 32);
+    expect(Math.round(box.x)).toBe(16);
     await page.keyboard.press('Escape');
     await page.getByTestId('open-filters').click();
     const drawer = page.getByRole('dialog', { name: 'Filters' });
@@ -397,7 +397,7 @@ test.describe('tablet specifics', () => {
 });
 
 test.describe('desktop specifics', () => {
-  test('every visible column has a filter and the side panel docks right', async ({
+  test('every column has a filter in the Filters panel; the pop-up is centred', async ({
     app,
     page,
     viewport,
@@ -406,24 +406,36 @@ test.describe('desktop specifics', () => {
     test.skip(layout !== 'desktop', 'desktop only');
     await seedThree(app);
     await app.goto();
-    const columns = await page.locator('thead th[data-col]').count();
-    expect(columns).toBe(11);
-    await expect(page.getByRole('button', { name: /^Filter / })).toHaveCount(columns);
-    await page.getByRole('button', { name: 'Columns' }).click();
-    await page
-      .getByRole('dialog', { name: 'Choose columns' })
-      .getByLabel('Effective Deadline')
-      .check();
+    // ClickUp-style list: column filters live in the Filters panel, not in the headers
+    await expect(page.getByRole('button', { name: /^Filter / })).toHaveCount(0);
+    const panel = await app.openFilterFor('Stage');
+    for (const group of [
+      'Category',
+      'Stage',
+      'Priority',
+      'PIC',
+      'Deadline Status',
+      'Plan Date',
+      'Adjusted Plan Date',
+      'Effective Deadline',
+      'Actual Date',
+      'Projected Start',
+    ]) {
+      await expect(panel.getByRole('group', { name: group, exact: true })).toBeVisible();
+    }
+    for (const text of ['Project', 'Description', 'Status Notes']) {
+      await expect(panel.getByLabel(text, { exact: true })).toBeVisible();
+    }
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: /^Filter / })).toHaveCount(columns + 1);
     const row = await app
       .row(app.name('Alpha overdue'))
       .evaluate((el) => el.getBoundingClientRect().height);
     expect(row).toBeGreaterThanOrEqual(36);
     await app.openProject(app.name('Alpha overdue'));
-    const box = await page.getByTestId('detail').boundingBox();
-    expect(box!.x + box!.width).toBeCloseTo(viewport!.width, 0);
-    expect(box!.width).toBeCloseTo(440, 0);
-    await app.shot('side-panel');
+    await page.waitForTimeout(300); // opening animation
+    const box = (await page.getByTestId('detail').boundingBox())!;
+    expect(Math.abs(box.x + box.width / 2 - viewport!.width / 2)).toBeLessThan(2);
+    expect(box.width).toBeGreaterThan(1000);
+    await app.shot('detail-popup');
   });
 });

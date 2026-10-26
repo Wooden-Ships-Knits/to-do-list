@@ -39,7 +39,8 @@ First time only: `cd frontend && npm ci && npx playwright install chromium`.
 | `make reset-db`         | Drops the database volume, migrates, seeds                                                                                                                                  |
 | `make lint`             | ruff + ruff format + mypy (backend); tsc + eslint (0 warnings) + prettier (frontend)                                                                                        |
 | `make test`             | pytest on a real PostgreSQL (coverage gate 85%) + Vitest                                                                                                                    |
-| `make e2e`              | Resets the database and runs Playwright on all 8 viewports (the row-number / drag-and-drop spec runs last, one viewport at a time, because numbers depend on every project) |
+| `make e2e`              | Playwright on all 8 viewports against its own fresh stack (`todo-e2e`, port 8091, own database volume: your data is never touched); the row-number / drag-and-drop spec runs last, one viewport at a time |
+| `make e2e-up` / `make e2e-down` | Start (fresh, seeded) / remove that Playwright stack, e.g. to run single specs with `cd frontend && npx playwright test e2e/auth.spec.ts` |
 | `make lighthouse`       | Lighthouse mobile run (Accessibility >= 95, Performance >= 85)                                                                                                              |
 | `make acceptance`       | Rebuilds `ACCEPTANCE.md` from the latest test results                                                                                                                       |
 

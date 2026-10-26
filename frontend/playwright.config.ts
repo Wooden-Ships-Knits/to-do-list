@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { ADMIN_STATE, CSRF } from './e2e/auth';
 
 /** Full suite on 8 viewports as separate projects. Phones and tablets use touch emulation. */
 const VIEWPORTS = [
@@ -36,7 +37,12 @@ export default defineConfig({
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   use: {
-    baseURL: process.env.BASE_URL ?? 'http://localhost:8090',
+    // `make e2e` runs its own stack on :8091 (never the normal one with real data).
+    baseURL: process.env.BASE_URL ?? 'http://localhost:8091',
+    // Every test is logged in as the admin (session saved by global-setup); API helpers send
+    // the CSRF header the server asks for on writes.
+    storageState: ADMIN_STATE,
+    extraHTTPHeaders: CSRF,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     actionTimeout: 10_000,

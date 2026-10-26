@@ -1,3 +1,4 @@
+import { ADMIN } from './auth';
 import { addDays, display, expect, test } from './fixtures';
 
 test.describe('create', () => {
@@ -146,13 +147,15 @@ test.describe('edit', () => {
 
     if (layout === 'mobile') {
       await expect(page.getByTestId('detail')).toHaveCount(0); // the sheet closes after saving
-      const again = await app.openProject(p.name);
-      await expect(again.getByTestId('activity-list')).toContainText('Stage: In Progress to Done');
+      await app.openProject(p.name);
     } else {
       await expect(save).toBeDisabled(); // form is clean again after saving
-      await expect(page.getByTestId('activity-list')).toContainText('Stage: In Progress to Done');
     }
+    // the history opens from the "Activity" button; every entry names who made the change
+    await page.getByTestId('toggle-activity').click();
     const list = page.getByTestId('activity-list');
+    await expect(list).toContainText('Stage: In Progress to Done');
+    await expect(list.locator('li').first()).toContainText(ADMIN.name);
     await expect(list).toContainText('Project created');
     await expect(list).toContainText(
       `Plan date: ${display('2027-05-05')} to ${display('2027-06-06')}`,
@@ -191,7 +194,7 @@ test.describe('edit', () => {
     await app.row(p.name).getByRole('group', { name: 'Schedule' }).tap();
     const detail = page.getByTestId('detail');
     await expect(detail).toBeVisible();
-    await expect(detail.getByLabel('Description', { exact: true })).toHaveValue(
+    await expect(detail.getByLabel('Description', { exact: true })).toHaveText(
       'Shown only in the sheet',
     );
     await page.waitForTimeout(400);
@@ -213,11 +216,9 @@ test.describe('edit', () => {
 
     const notice = detail.getByTestId('conflict-notice');
     await expect(notice).toContainText('changed by someone else');
-    await expect(detail.getByLabel('Description', { exact: true })).toHaveValue(
-      'their description',
-    );
+    await expect(detail.getByLabel('Description', { exact: true })).toHaveText('their description');
     await expect(detail.getByLabel('Deadline note', { exact: true })).toHaveValue('their note');
-    await expect(detail.getByLabel('Status notes', { exact: true })).toHaveValue('my notes');
+    await expect(detail.getByLabel('Status notes', { exact: true })).toHaveText('my notes');
     expect((await app.get(p.id)).status_notes).toBe(''); // nothing was overwritten
 
     await detail.getByRole('button', { name: 'Save changes' }).click();
@@ -235,8 +236,8 @@ test.describe('edit', () => {
     await app.patch(p, { description: 'theirs' });
     await detail.getByRole('button', { name: 'Save changes' }).click();
     await detail.getByRole('button', { name: 'Discard my edits' }).click();
-    await expect(detail.getByLabel('Status notes', { exact: true })).toHaveValue('');
-    await expect(detail.getByLabel('Description', { exact: true })).toHaveValue('theirs');
+    await expect(detail.getByLabel('Status notes', { exact: true })).toHaveText('');
+    await expect(detail.getByLabel('Description', { exact: true })).toHaveText('theirs');
     await expect(detail.getByTestId('conflict-notice')).toHaveCount(0);
   });
 
@@ -260,7 +261,7 @@ test.describe('edit', () => {
     await expect(
       detail.getByRole('alert').filter({ hasText: 'Internal server error' }),
     ).toBeVisible();
-    await expect(detail.getByLabel('Description', { exact: true })).toHaveValue('will fail'); // edits are not lost
+    await expect(detail.getByLabel('Description', { exact: true })).toHaveText('will fail'); // edits are not lost
   });
 });
 
@@ -371,7 +372,9 @@ test.describe('delete, undo and move', () => {
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeFocused();
     await page.keyboard.press('ArrowDown');
-    await expect(page.getByRole('menuitem', { name: /^Move to/ }).first()).toBeFocused();
+    await expect(page.getByRole('menuitem', { name: 'Add subtask' })).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(trigger).toBeFocused();

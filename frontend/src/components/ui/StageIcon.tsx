@@ -39,7 +39,7 @@ export function StageIcon({ name }: { name: string }) {
       aria-hidden="true"
       data-stage-icon={slug}
     >
-      <Icon size={16} strokeWidth={2} />
+      <Icon size={16} strokeWidth={1.75} />
     </span>
   );
 }
