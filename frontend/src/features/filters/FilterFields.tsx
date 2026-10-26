@@ -3,6 +3,7 @@ import { CATEGORIES, DEADLINE_STATUSES } from '../../api/types';
 import type { DateKey } from '../../api/types';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
+import { filterLabel, PRIORITY_FILTERS } from '../../lib/priority';
 import { CATEGORY_LABELS, STATUS_LABELS } from '../../lib/status';
 import { DATE_LABELS, effectiveCategories } from '../../lib/view';
 import type { ViewState } from '../../lib/view';
@@ -16,7 +17,7 @@ interface BaseProps {
   setView: SetView;
 }
 
-export type MultiKind = 'category' | 'stage' | 'pic' | 'status';
+export type MultiKind = 'category' | 'stage' | 'pic' | 'status' | 'priority';
 export type TextKind = 'name' | 'desc' | 'notes';
 
 export const MULTI_LABELS: Record<MultiKind, string> = {
@@ -24,6 +25,7 @@ export const MULTI_LABELS: Record<MultiKind, string> = {
   stage: 'Stage',
   pic: 'PIC',
   status: 'Deadline Status',
+  priority: 'Priority',
 };
 
 export const TEXT_LABELS: Record<TextKind, string> = {
@@ -82,6 +84,20 @@ export function MultiFilter({
         ]}
         selected={view.pic}
         onChange={(next) => setView((v) => ({ ...v, pic: next, page: 1 }))}
+      />
+    );
+  }
+  if (kind === 'priority') {
+    return (
+      <CheckList
+        legend={legend}
+        hideLegend={hideLegend}
+        name="priority"
+        options={PRIORITY_FILTERS.map((p) => ({ value: p, label: filterLabel(p) }))}
+        selected={view.priority}
+        onChange={(next) =>
+          setView((v) => ({ ...v, priority: next as typeof v.priority, page: 1 }))
+        }
       />
     );
   }

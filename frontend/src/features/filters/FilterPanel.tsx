@@ -72,6 +72,15 @@ export function FilterPanel({ view, setView, stages, persons, showSort }: Props)
         <MultiFilter kind="stage" view={view} setView={setView} stages={stages} persons={persons} />
       </div>
       <div className={styles.section}>
+        <MultiFilter
+          kind="priority"
+          view={view}
+          setView={setView}
+          stages={stages}
+          persons={persons}
+        />
+      </div>
+      <div className={styles.section}>
         <TextFilter kind="notes" view={view} setView={setView} />
       </div>
       {DATE_KEYS.map((key) => (

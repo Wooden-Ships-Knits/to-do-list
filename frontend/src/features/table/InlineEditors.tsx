@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { Person, Project, Stage } from '../../api/types';
+import type { Person, Priority, Project, Stage } from '../../api/types';
+import { PRIORITIES } from '../../api/types';
 import { AvatarGroup } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
 import { Popover } from '../../components/ui/Popover';
+import { PriorityFlag } from '../../components/ui/PriorityFlag';
 import { StagePill } from '../../components/ui/StagePill';
+import { NO_PRIORITY, PRIORITY_LABELS } from '../../lib/priority';
 import { formatDate } from '../../lib/dates';
 import { useMeta } from '../../api/hooks';
 import styles from './InlineEditors.module.css';
@@ -14,7 +17,15 @@ import styles from './InlineEditors.module.css';
 /** A project or a subtask: both have a stage, PICs and the schedule dates. */
 export type EditableItem = Pick<
   Project,
-  'id' | 'name' | 'stage_id' | 'stage' | 'pics' | 'plan_date' | 'adjusted_plan_date' | 'actual_date'
+  | 'id'
+  | 'name'
+  | 'stage_id'
+  | 'stage'
+  | 'pics'
+  | 'plan_date'
+  | 'adjusted_plan_date'
+  | 'actual_date'
+  | 'priority'
 > & { projected_start_date?: string | null };
 
 interface CellEditorProps<T> {
@@ -192,6 +203,46 @@ export function StageCell({
                 {s.name}
               </option>
             ))}
+          </select>
+        </div>
+      )}
+    />
+  );
+}
+
+/** ClickUp-style priority: Urgent, High, Normal, Low, or none ("Clear"). */
+export function PriorityCell({
+  project,
+  onSave,
+}: {
+  project: EditableItem;
+  onSave: (priority: Priority | null) => void;
+}) {
+  const current = project.priority ?? '';
+  return (
+    <CellEditor<string>
+      label={`Edit Priority of ${project.name}`}
+      initial={current}
+      changed={(draft) => draft !== current}
+      onSave={(draft) => onSave(draft === '' ? null : (draft as Priority))}
+      display={<PriorityFlag priority={project.priority} quiet />}
+      render={(draft, setDraft) => (
+        <div className={styles.field}>
+          <label className={styles.fieldLabel} htmlFor={`priority-${project.id}`}>
+            Priority
+          </label>
+          <select
+            id={`priority-${project.id}`}
+            className={styles.select}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          >
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABELS[p]}
+              </option>
+            ))}
+            <option value="">{NO_PRIORITY}</option>
           </select>
         </div>
       )}

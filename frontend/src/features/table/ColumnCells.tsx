@@ -8,7 +8,7 @@ import { formatDate } from '../../lib/dates';
 import type { Actions } from '../actions/ProjectActions';
 import { StageIcon } from '../../components/ui/StageIcon';
 import { FoldToggle, NotesMark, ProgressBadge } from '../subtasks/parts';
-import { DateCell, PicCell, StageCell } from './InlineEditors';
+import { DateCell, PicCell, PriorityCell, StageCell } from './InlineEditors';
 import styles from './ProjectTable.module.css';
 
 export interface TableMeta {
@@ -85,6 +85,13 @@ function Cell({ id, ctx }: { id: ColumnId; ctx: CellContext<Project, unknown> })
           project={project}
           stages={stages}
           onSave={(stageId) => actions.changeStage(project, stageId)}
+        />
+      );
+    case 'priority':
+      return (
+        <PriorityCell
+          project={project}
+          onSave={(priority) => actions.patch(project, { priority })}
         />
       );
     case 'status_notes':

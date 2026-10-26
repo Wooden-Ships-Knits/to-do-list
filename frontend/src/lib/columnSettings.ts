@@ -3,6 +3,7 @@ export type ColumnId =
   | 'name'
   | 'description'
   | 'stage'
+  | 'priority'
   | 'status_notes'
   | 'plan_date'
   | 'adjusted_plan_date'
@@ -17,6 +18,7 @@ export const COLUMN_LABELS: Record<ColumnId, string> = {
   name: 'Project',
   description: 'Description',
   stage: 'Stage',
+  priority: 'Priority',
   status_notes: 'Status Notes',
   plan_date: 'Plan Date',
   adjusted_plan_date: 'Adjusted Plan Date',
@@ -41,6 +43,7 @@ export const DESKTOP_ORDER: ColumnId[] = [
   'name',
   'description',
   'stage',
+  'priority',
   'status_notes',
   'projected_start_date',
   'effective_deadline',
@@ -56,6 +59,7 @@ export const TABLET_ORDER: ColumnId[] = [
   'category',
   'description',
   'stage',
+  'priority',
   'status_notes',
   'projected_start_date',
   'effective_deadline',
@@ -71,6 +75,7 @@ export const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   name: 360,
   description: 280,
   stage: 140,
+  priority: 120,
   status_notes: 280,
   plan_date: 164,
   adjusted_plan_date: 164,
@@ -83,8 +88,8 @@ export const DEFAULT_WIDTHS: Record<ColumnId, number> = {
 
 /** ClickUp-style list: a short set of columns by default (the rest from "Columns"). */
 const DEFAULT_VISIBLE: Record<TableLayout, ColumnId[]> = {
-  desktop: ['name', 'stage', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
-  tablet: ['name', 'stage', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
+  desktop: ['name', 'stage', 'priority', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
+  tablet: ['name', 'stage', 'priority', 'plan_date', 'actual_date', 'pic', 'deadline_status'],
 };
 
 export type TableLayout = 'desktop' | 'tablet';

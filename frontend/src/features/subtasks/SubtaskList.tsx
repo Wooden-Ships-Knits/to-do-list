@@ -10,7 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { expandedStore, useExpanded } from '../../lib/expanded';
 import { progressLabel, subtree, visibleTasks } from '../../lib/tasks';
 import { DragHandle } from '../dnd/DragHandle';
-import { DateCell, PicCell, StageCell } from '../table/InlineEditors';
+import { DateCell, PicCell, PriorityCell, StageCell } from '../table/InlineEditors';
 import { AddTaskInput, DoneCheckbox, FoldToggle, NotesMark, TaskMenu } from './parts';
 import { useTaskActions } from './TaskActions';
 import { useTaskDnd } from './useTaskDnd';
@@ -30,8 +30,8 @@ interface ItemProps {
   onAddSubtask: () => void;
 }
 
-/** One subtask: grip, caret, status circle, name, count / notes icons, then PIC, due date and
- *  stage, each editable in place, and the row menu. */
+/** One subtask: grip, caret, status circle, name, count / notes icons, then PIC, due date,
+ *  priority and stage, each editable in place, and the row menu. */
 function Item({ task, all, stages, persons, baseDepth, depth, folded, onAddSubtask }: ItemProps) {
   const actions = useTaskActions();
   const {
@@ -117,6 +117,9 @@ function Item({ task, all, stages, persons, baseDepth, depth, folded, onAddSubta
             }
           />
         </div>
+        <div className={styles.cell} data-col="priority">
+          <PriorityCell project={task} onSave={(priority) => actions.patch(task, { priority })} />
+        </div>
         <div className={styles.cell} data-col="stage">
           <StageCell
             project={task}
@@ -139,7 +142,7 @@ interface Props {
 }
 
 /** Subtasks in the detail pop-up / sheet, laid out like ClickUp's: "Subtasks · 2 open" with a
- *  progress bar, then a compact table (Name, PIC, Due date, Stage). Tick, open, edit in place,
+ *  progress bar, then a compact table (Name, PIC, Due date, Priority, Stage). Tick, open, edit in place,
  *  add, and reorder (drag, or the menu's Move up / Move down / Indent / Outdent). */
 export function SubtaskList({ projectId, parent }: Props) {
   const query = useTasks(projectId);
@@ -208,6 +211,7 @@ export function SubtaskList({ projectId, parent }: Props) {
               <span>Name</span>
               <span>PIC</span>
               <span>Due date</span>
+              <span>Priority</span>
               <span>Stage</span>
               <span />
             </div>

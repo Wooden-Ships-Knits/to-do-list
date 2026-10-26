@@ -195,6 +195,17 @@ describe.each(THEMES)('%s theme: text contrast is at least WCAG AA (4.5:1)', (_n
     expect(ratio(colour(t, 'done-text'), colour(t, 'surface-alt'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each(['urgent', 'high', 'normal', 'low'])(
+    'priority flag %s stands out as a graphic (3:1) on every row background',
+    (level) => {
+      for (const row of ['bg', 'surface', 'surface-alt', 'surface-raised']) {
+        expect(ratio(colour(t, `priority-${level}`), colour(t, row))).toBeGreaterThanOrEqual(3);
+      }
+      const tinted = over(parse(t['overdue-tint'] as string), parse(t['bg'] as string));
+      expect(ratio(colour(t, `priority-${level}`), tinted)).toBeGreaterThanOrEqual(3);
+    },
+  );
+
   it('schedule cells: filled text, adjusted date and labels, in rest and hover states', () => {
     for (const cell of ['cell-filled', 'cell-filled-hover']) {
       expect(ratio(colour(t, 'cell-filled-text'), colour(t, cell))).toBeGreaterThanOrEqual(4.5);

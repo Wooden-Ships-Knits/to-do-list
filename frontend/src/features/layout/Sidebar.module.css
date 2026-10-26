@@ -154,3 +154,22 @@
   padding-top: var(--s3);
   border-top: 1px solid var(--border);
 }
+
+/* The logged-in user, below Import / Export */
+.user {
+  margin-top: var(--s2);
+  min-height: 44px;
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.userRole {
+  color: var(--text-muted-aa);
+  font-size: 12px;
+}

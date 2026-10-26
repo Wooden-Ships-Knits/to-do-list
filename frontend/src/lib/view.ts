@@ -2,6 +2,8 @@ import type { QueryParams } from '../api/client';
 import type { Category, DateKey, DeadlineStatus, Person, Stage } from '../api/types';
 import { CATEGORIES, DEADLINE_STATUSES } from '../api/types';
 import { formatDate, isValidIsoDate } from './dates';
+import { filterLabel, PRIORITY_FILTERS } from './priority';
+import type { PriorityFilter } from './priority';
 import { CATEGORY_LABELS, STATUS_LABELS } from './status';
 
 export const SORT_KEYS = [
@@ -17,6 +19,7 @@ export const SORT_KEYS = [
   'projected_start_date',
   'pic',
   'deadline_status',
+  'priority',
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 export type SortDir = 'asc' | 'desc';
@@ -27,7 +30,7 @@ export interface DateFilter {
   tbd: boolean;
 }
 
-export type GroupBy = 'category' | 'stage' | 'none';
+export type GroupBy = 'category' | 'stage' | 'priority' | 'none';
 
 export interface ViewState {
   tab: 'all' | Category;
@@ -35,6 +38,8 @@ export interface ViewState {
   stage: number[];
   pic: string[];
   status: DeadlineStatus[];
+  /** Priority levels, plus "none" for projects without one. */
+  priority: PriorityFilter[];
   q: string;
   name: string;
   desc: string;
@@ -75,6 +80,7 @@ export function defaultView(): ViewState {
     stage: [],
     pic: [],
     status: [],
+    priority: [],
     q: '',
     name: '',
     desc: '',
@@ -114,6 +120,7 @@ export function parseView(sp: URLSearchParams): ViewState {
     .filter((n) => Number.isInteger(n) && n > 0);
   view.pic = list(sp.get('pic'));
   view.status = pickEnum(list(sp.get('status')), DEADLINE_STATUSES);
+  view.priority = pickEnum(list(sp.get('priority')), PRIORITY_FILTERS);
   view.q = sp.get('q') ?? '';
   view.name = sp.get('name') ?? '';
   view.desc = sp.get('desc') ?? '';
@@ -136,7 +143,11 @@ export function parseView(sp: URLSearchParams): ViewState {
   const group = sp.get('group');
   // "0" is the old "grouping off" value, still accepted in shared links.
   view.group =
-    group === 'stage' ? 'stage' : group === '0' || group === 'none' ? 'none' : 'category';
+    group === 'stage' || group === 'priority'
+      ? group
+      : group === '0' || group === 'none'
+        ? 'none'
+        : 'category';
   return view;
 }
 
@@ -146,6 +157,7 @@ const VIEW_KEYS = [
   'stage',
   'pic',
   'status',
+  'priority',
   'q',
   'name',
   'desc',
@@ -168,6 +180,7 @@ export function serializeView(
   if (view.stage.length) sp.set('stage', view.stage.join(','));
   if (view.pic.length) sp.set('pic', view.pic.join(','));
   if (view.status.length) sp.set('status', view.status.join(','));
+  if (view.priority.length) sp.set('priority', view.priority.join(','));
   if (view.q) sp.set('q', view.q);
   if (view.name) sp.set('name', view.name);
   if (view.desc) sp.set('desc', view.desc);
@@ -181,7 +194,7 @@ export function serializeView(
   if (view.sort) sp.set('sort', `${view.dir === 'desc' ? '-' : ''}${view.sort}`);
   if (view.page > 1) sp.set('page', String(view.page));
   if (view.group === 'none') sp.set('group', '0');
-  else if (view.group === 'stage') sp.set('group', 'stage');
+  else if (view.group === 'stage' || view.group === 'priority') sp.set('group', view.group);
   return sp;
 }
 
@@ -196,6 +209,7 @@ export function filterParams(view: ViewState): QueryParams {
   for (const s of view.stage) params.push(['stage', String(s)]);
   for (const p of view.pic) params.push(['pic', p]);
   for (const s of view.status) params.push(['deadline_status', s]);
+  for (const p of view.priority) params.push(['priority', p]);
   if (view.q.trim()) params.push(['search', view.q.trim()]);
   if (view.name.trim()) params.push(['name', view.name.trim()]);
   if (view.desc.trim()) params.push(['description', view.desc.trim()]);
@@ -269,6 +283,13 @@ export function activeChips(view: ViewState, stages: Stage[], persons: Person[])
       id: `status:${s}`,
       label: `Status: ${STATUS_LABELS[s]}`,
       remove: (v) => reset({ ...v, status: v.status.filter((x) => x !== s) }),
+    });
+  }
+  for (const p of view.priority) {
+    chips.push({
+      id: `priority:${p}`,
+      label: `Priority: ${filterLabel(p)}`,
+      remove: (v) => reset({ ...v, priority: v.priority.filter((x) => x !== p) }),
     });
   }
   if (view.q)

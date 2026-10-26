@@ -11,12 +11,14 @@ import {
   useStages,
 } from '../../api/hooks';
 import type { Category, Project } from '../../api/types';
-import { CATEGORIES } from '../../api/types';
+import { CATEGORIES, PRIORITIES } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { CheckList } from '../../components/ui/CheckList';
 import { DateField } from '../../components/ui/DateField';
 import { MarkdownEditor } from '../../components/markdown/MarkdownEditor';
+import { CreatedBy } from './CreatedBy';
 import { DetailFooter } from './DetailLayout';
+import { NO_PRIORITY, PRIORITY_LABELS } from '../../lib/priority';
 import { CATEGORY_LABELS, DONE_STAGE } from '../../lib/status';
 import {
   adjustedBeforePlanWarning,
@@ -61,6 +63,7 @@ const FIELD_NAMES = new Set<keyof ProjectFormValues>([
   'adjusted_plan_date',
   'actual_date',
   'projected_start_date',
+  'priority',
   'pic_ids',
 ]);
 
@@ -219,6 +222,9 @@ export function ProjectForm({
         />
         <FieldError id={errorId('name')} message={errors.name?.message} />
       </div>
+      {mode === 'edit' && project && (
+        <CreatedBy actor={project.created_by} at={project.created_at} />
+      )}
 
       <div className={styles.props}>
         <div className={styles.field}>
@@ -247,6 +253,17 @@ export function ProjectForm({
             ))}
           </select>
           <FieldError id={errorId('stage_id')} message={errors.stage_id?.message} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="pf-priority">Priority</label>
+          <select id="pf-priority" {...register('priority')}>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABELS[p]}
+              </option>
+            ))}
+            <option value="">{NO_PRIORITY}</option>
+          </select>
         </div>
         <Controller
           control={control}

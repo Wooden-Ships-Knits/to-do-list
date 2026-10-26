@@ -9,6 +9,7 @@ import { CATEGORY_LABELS } from '../../lib/status';
 import { summaryPreset } from '../../lib/view';
 import type { ViewState } from '../../lib/view';
 import type { SetView } from '../filters/FilterFields';
+import { UserMenu } from './UserMenu';
 import styles from './Sidebar.module.css';
 
 export const APP_NAME = 'Team To-Do';
@@ -197,6 +198,7 @@ export function SidebarNav({
             { label: 'Export Excel', onSelect: () => go(() => onExport('xlsx')) },
           ]}
         />
+        <UserMenu rail={rail} onNavigate={onNavigate} />
       </div>
     </div>
   );

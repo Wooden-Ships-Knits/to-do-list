@@ -1,5 +1,6 @@
-import type { ActivityEntry, Person, ProjectPatch, Stage } from '../api/types';
+import type { ActivityEntry, Actor, Person, ProjectPatch, Stage } from '../api/types';
 import { formatDate } from './dates';
+import { isPriority, PRIORITY_LABELS } from './priority';
 import { CATEGORY_LABELS } from './status';
 import type { Category } from '../api/types';
 
@@ -19,7 +20,13 @@ const FIELD_LABELS: Record<string, string> = {
   pics: 'PIC',
   pic_ids: 'PIC',
   notes: 'Notes',
+  priority: 'Priority',
 };
+
+/** Who made a change; entries from before logins existed have no actor. */
+export function actorName(actor: Actor | null): string {
+  return actor?.name ?? 'Unknown';
+}
 
 const DATE_FIELDS = new Set([
   'plan_date',
@@ -32,7 +39,11 @@ const clip = (text: string, max = 60): string =>
   text.length > max ? `${text.slice(0, max)}...` : text;
 
 function formatValue(field: string, value: string | null): string {
-  if (value === null || value === '') return field === 'pics' ? 'TBD' : 'empty';
+  if (value === null || value === '') {
+    if (field === 'pics') return 'TBD';
+    return field === 'priority' ? 'none' : 'empty';
+  }
+  if (field === 'priority' && isPriority(value)) return PRIORITY_LABELS[value];
   if (DATE_FIELDS.has(field)) return formatDate(value);
   if (field === 'category' && value in CATEGORY_LABELS) return CATEGORY_LABELS[value as Category];
   return clip(value);
@@ -82,6 +93,7 @@ export function describePatch(patch: ProjectPatch, stages: Stage[], persons: Per
       text = names.length ? names.join(', ') : 'TBD';
     } else if (DATE_FIELDS.has(field)) text = formatDate(value as string | null);
     else if (field === 'category') text = CATEGORY_LABELS[value as Category];
+    else if (field === 'priority') text = isPriority(value) ? PRIORITY_LABELS[value] : 'None';
     else text = clip(String(value ?? ''));
     lines.push(`${label}: ${text}`);
   }

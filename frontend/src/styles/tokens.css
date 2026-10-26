@@ -109,6 +109,14 @@
   --st-no-deadline-fg: #a8a9ae;
   --st-no-deadline-bg: rgba(154, 155, 161, 0.14);
 
+  /* Priority flags (ClickUp-style: red, yellow, blue, grey). The level is always written next
+     to the flag, so these only need the 3:1 of a graphic. */
+  --priority-urgent: #f07a70;
+  --priority-high: #e2b657;
+  --priority-normal: #6fa8dc;
+  --priority-low: #9a9ba1;
+  --priority-none: #6b6c72;
+
   --done-text: #9a9ba1;
   --overdue-border: #f07a70;
   --overdue-tint: rgba(240, 122, 112, 0.06);
@@ -192,6 +200,12 @@
   --st-no-deadline-fg: #6b665d;
 
   --done-text: #6b665d;
+  --priority-urgent: #c0473c;
+  --priority-high: #a87a1f;
+  --priority-normal: #4a6a96;
+  --priority-low: #8a857c;
+  --priority-none: #b4aea3;
+
   --overdue-border: #c9867c;
   --overdue-tint: #fcf5f3;
 

@@ -10,6 +10,32 @@ export const DEADLINE_STATUSES = [
 ] as const;
 export type DeadlineStatus = (typeof DEADLINE_STATUSES)[number];
 
+/** ClickUp-style priority; null = no priority. */
+export const PRIORITIES = ['urgent', 'high', 'normal', 'low'] as const;
+export type Priority = (typeof PRIORITIES)[number];
+
+/** The user behind a change or a creation (`name` is the linked person's name). */
+export interface Actor {
+  id: string;
+  username: string;
+  name: string;
+}
+
+export interface CurrentUser {
+  id: string;
+  username: string;
+  person: Person;
+  is_admin: boolean;
+  must_change_password: boolean;
+}
+
+export interface AdminUser extends CurrentUser {
+  is_active: boolean;
+  created_at: string;
+  last_login_at: string | null;
+  password_changed_at: string | null;
+}
+
 export interface Person {
   id: string;
   name: string;
@@ -36,7 +62,10 @@ export interface Project {
   actual_date: string | null;
   projected_start_date: string | null;
   deadline_note: string;
+  priority: Priority | null;
   pics: Person[];
+  /** null for projects created before logins existed. */
+  created_by: Actor | null;
   version: number;
   deleted_at: string | null;
   created_at: string;
@@ -69,7 +98,9 @@ export interface Task {
   plan_date: string | null;
   adjusted_plan_date: string | null;
   actual_date: string | null;
+  priority: Priority | null;
   pics: Person[];
+  created_by: Actor | null;
   version: number;
   deleted_at: string | null;
   created_at: string;
@@ -86,6 +117,7 @@ export interface TaskPatch {
   plan_date?: string | null;
   adjusted_plan_date?: string | null;
   actual_date?: string | null;
+  priority?: Priority | null;
   pic_ids?: string[];
 }
 
@@ -97,6 +129,7 @@ export interface TaskCreateBody {
   plan_date?: string | null;
   adjusted_plan_date?: string | null;
   actual_date?: string | null;
+  priority?: Priority | null;
   pic_ids?: string[];
 }
 
@@ -153,6 +186,8 @@ export interface ActivityEntry {
   old_value: string | null;
   new_value: string | null;
   changed_at: string;
+  /** Who made the change; null for entries from before logins existed. */
+  actor: Actor | null;
 }
 
 export interface ImportFieldError {
@@ -167,6 +202,7 @@ export interface ImportRow {
     name: string;
     category: string;
     stage: string;
+    priority?: Priority | null;
     plan_date: string | null;
     adjusted_plan_date: string | null;
     actual_date: string | null;
@@ -200,6 +236,7 @@ export interface ProjectPatch {
   actual_date?: string | null;
   projected_start_date?: string | null;
   deadline_note?: string;
+  priority?: Priority | null;
   pic_ids?: string[];
 }
 
@@ -215,6 +252,7 @@ export interface ProjectCreateBody {
   actual_date: string | null;
   projected_start_date: string | null;
   deadline_note: string;
+  priority: Priority | null;
   pic_ids: string[];
 }
 

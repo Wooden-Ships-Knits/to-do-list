@@ -151,10 +151,42 @@ def require_admin(user=Depends(current_user)) -> User:
 - [ ] `.env.example` + compose env vars.
 - [ ] Run `make lint` and `make test-backend`; fix everything; commit.
 
-## L2 / L3 (outline, detailed later)
+## Phase L2 — frontend
 
-- L2: `api/client.ts` credentials + header + 401 handling; `useMe`; `LoginPage`,
-  `ChangePasswordPage`; `UserMenu` in sidebar; `UsersPage`; activity actor + created by;
-  `PriorityPill`, priority column/inline edit/filter/sort/group; subtask priority; tokens +
-  contrast tests; Vitest.
-- L3: Playwright storageState login; new specs on all 8 viewports; screenshots; ACCEPTANCE.md.
+### File map
+
+| File | Change |
+| --- | --- |
+| `src/api/types.ts` | `Priority`, `PRIORITIES`, `Actor`, `CurrentUser`, `AdminUser`; priority / created_by / actor fields |
+| `src/api/client.ts` | `credentials: 'same-origin'`, `X-Requested-With: fetch` on every call; `setUnauthorizedHandler` for 401 and 403 `password_change_required`; auth + users endpoints |
+| `src/api/authHooks.ts` | new: `useMe`, `useLogin`, `useLogout`, `useChangePassword`, `useUsers`, `useCreateUser`, `usePatchUser`, `useResetPassword` |
+| `src/features/auth/AuthGate.tsx` | new: `RequireAuth` (loading / redirect / forced change), `UnauthorizedRedirect` (installs the handler) |
+| `src/lib/authSchema.ts` | new: Zod for login, change password, add user (same rules as Pydantic) + `safeNext()` |
+| `src/pages/LoginPage.tsx`, `ChangePasswordPage.tsx`, `AuthPage.module.css` | new |
+| `src/pages/UsersPage.tsx`, `UsersPage.module.css` | new: table (cards on mobile), add / reset / admin / active |
+| `src/features/layout/UserMenu.tsx` | new: avatar + name, Change password, Users (admins), Log out |
+| `src/App.tsx` | public `/login`; `/change-password`; everything else behind `RequireAuth`; `/users` |
+| `src/lib/priority.ts` | new: order, labels, rank |
+| `src/components/ui/PriorityFlag.tsx` (+ css) | new: flag icon in the level colour + word; empty state |
+| `src/styles/tokens.css` | `--priority-urgent/high/normal/low/none` per theme |
+| `src/lib/columnSettings.ts` | `priority` column after Stage, visible by default |
+| `src/lib/view.ts` | `priority` filter (URL `priority=`), sort key, `group=priority`, chips |
+| `src/features/table/*` | Priority cell + inline editor, priority groups, quick add in a priority group |
+| `src/features/subtasks/*` | priority cell in rows, list and form |
+| `src/features/detail/*` | priority field, "Created by", actor names in Activity |
+| `src/features/cards/ProjectCards.tsx` | priority flag on the card |
+| `src/features/filters/*`, `layout/SortMenu.tsx`, `pages/DashboardPage.tsx` | Priority filter, sort option, group option |
+| `src/lib/describe.ts` | priority labels in history |
+
+### Tasks (each: test first where there is logic, then code, then `npm run lint && npm run test`)
+
+1. API types + client (headers, 401 handler) + auth hooks. Test: `client.test.ts` (headers sent, 401 calls the handler, login 401 does not).
+2. Auth schemas + pages + gate + user menu + routes. Tests: `authSchema.test.ts`, `LoginPage.test.tsx` (validation, wrong password message, redirect to `next`), `ChangePasswordPage.test.tsx` (rules, forced mode).
+3. Users page. Test: `UsersPage.test.tsx` (list, add with server error on the field, reset confirm, own row has no actions).
+4. Attribution: Activity actor + "Created by". Test: `ActivityList` / describe tests.
+5. Priority: tokens + contrast test (flag colours ≥ 3:1 as graphics), `priority.ts` + test, PriorityFlag + test, column, inline edit, forms, subtasks, cards, filter / chip / URL (view tests), sort, group.
+6. Visual check of login, users, table with priority in both themes at 390 / 768 / 1440 (Playwright screenshots against the dev stack), then lint + unit tests, commit.
+
+## L3 (outline, detailed later)
+
+- Playwright storageState login; new specs on all 8 viewports; screenshots; ACCEPTANCE.md.

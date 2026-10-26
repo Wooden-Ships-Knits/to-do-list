@@ -20,8 +20,38 @@
 
 .item {
   display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+}
+
+.avatar {
+  flex: none;
+  padding-top: 1px;
+}
+
+.avatar [data-avatar] {
+  margin-left: 0;
+}
+
+.unknown {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text-muted-aa);
+}
+
+.body {
+  display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+.actor {
+  font-weight: 600;
 }
 
 .what {
@@ -36,4 +66,10 @@
 .muted {
   margin: 0;
   color: var(--text-muted-aa);
+}
+
+.created {
+  margin: calc(-1 * var(--s3)) 0 0;
+  color: var(--text-muted-aa);
+  font-size: 12px;
 }

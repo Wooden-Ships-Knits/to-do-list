@@ -1,6 +1,6 @@
 # Login + attribution, and ClickUp-style priority — design
 
-Status: design approved 2026-10-26. Branch `feature/login-priority` (off `feature/clickup-list-view`, PR #2).
+Status: design approved 2026-10-26. L1 (backend) and L2 (frontend) implemented; L3 (Playwright) pending. Branch `feature/login-priority` (off `feature/clickup-list-view`, PR #2).
 
 ## Decisions
 
@@ -106,8 +106,8 @@ the username does not exist yet. A second run never resets a password or flags.
   avatar + name, "Change password", "Users" (admins), "Log out".
 - Users page (`/users`, admin only, non-admins get a 403 state): table (Username, Person, Admin,
   Active, Last login) on desktop/tablet, cards on mobile. Actions: Add user (dialog: username +
-  name), Reset password (confirm), Activate/Deactivate, Make admin/Remove admin. On one's own row
-  these are disabled with a reason.
+  name), Reset password (confirm), Activate/Deactivate, Make admin/Remove admin. One's own row
+  is marked "(you)" and has a Change password link instead of these actions.
 
 **Attribution**
 - Activity history lines: avatar + "Denan · changed Stage from Testing to Live · 2h ago"; NULL actor

@@ -10,13 +10,14 @@ import {
 beforeEach(() => window.localStorage.clear());
 
 describe('column settings', () => {
-  it('ClickUp-style defaults: Project, Stage, Plan, Actual, PIC, Deadline Status; no #', () => {
+  it('ClickUp-style defaults: Project, Stage, Priority, Plan, Actual, PIC, Deadline Status; no #', () => {
     for (const layout of ['desktop', 'tablet'] as const) {
       const s = defaultSettings(layout);
       const order = layout === 'desktop' ? DESKTOP_ORDER : TABLET_ORDER;
       expect(order.filter((id) => s.visibility[id])).toEqual([
         'name',
         'stage',
+        'priority',
         'plan_date',
         'actual_date',
         'pic',
@@ -32,12 +33,13 @@ describe('column settings', () => {
       expect(SCHEDULE_COLUMNS).toEqual(['plan_date', 'adjusted_plan_date', 'actual_date', 'pic']);
     }
   });
-  it('desktop order is Category, Project, Description, Stage, Status Notes, Projected Start, Schedule, Deadline Status', () => {
+  it('desktop order is Category, Project, Description, Stage, Priority, Status Notes, Projected Start, Schedule, Deadline Status', () => {
     expect(DESKTOP_ORDER.filter((id) => id !== 'effective_deadline')).toEqual([
       'category',
       'name',
       'description',
       'stage',
+      'priority',
       'status_notes',
       'projected_start_date',
       'plan_date',
@@ -46,6 +48,16 @@ describe('column settings', () => {
       'pic',
       'deadline_status',
     ]);
+  });
+  it('people with saved column settings get the new Priority column too', () => {
+    const saved = defaultSettings('desktop');
+    const older: Partial<typeof saved.visibility> = { ...saved.visibility };
+    delete older.priority; // saved before the column existed
+    window.localStorage.setItem(
+      'todo.columns.v3.desktop',
+      JSON.stringify({ ...saved, visibility: older }),
+    );
+    expect(loadSettings('desktop').visibility.priority).toBe(true);
   });
   it('the other columns can be switched on and the # column is remembered', () => {
     const s = defaultSettings('desktop');
